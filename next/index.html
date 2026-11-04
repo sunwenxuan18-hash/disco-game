@@ -1,0 +1,2017 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0d101e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DISCO">
+  <meta name="description" content="经营属于你的迪斯科舞厅。升级灯光、邀请 DJ，让夜晚热闹起来。">
+  <title>DISCO · 今晚，由你开场</title>
+  <style>
+:root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 16px;
+  font-synthesis: none;
+  --ink: #0d101e;
+  --surface: #181d31;
+  --surface-raised: #232a43;
+  --line: #343e5a;
+  --text: #f2f3fb;
+  --muted: #b2bbd3;
+  --quiet: #8996b6;
+  --mint: #a1e8dc;
+  --violet: #b9a4ee;
+  --peach: #edbc9e;
+  --danger: #ffb5ad;
+  background: var(--ink);
+  color: var(--text);
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-width: 280px; background: radial-gradient(ellipse at 50% 40%, #171c32, var(--ink) 72%); }
+button, input, select, textarea { font: inherit; }
+button {
+  color: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+button:focus-visible, canvas:focus-visible, a:focus-visible { outline: 3px solid var(--mint); outline-offset: 3px; }
+button:disabled { cursor: default; }
+a { color: var(--mint); text-underline-offset: 3px; }
+
+.club-app {
+  display: grid;
+  grid-template-areas: "header" "hud" "goal" "stage" "notice" "nav" "footer";
+  grid-template-rows: 48px auto auto minmax(160px, 1fr) 38px 56px 18px;
+  gap: 8px;
+  width: min(100%, 760px);
+  height: 100vh;
+  min-height: 500px;
+  margin: 0 auto;
+  padding: max(10px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+}
+@supports (height: 100svh) { .club-app { height: 100svh; } }
+@supports (height: 100dvh) { .club-app { height: 100dvh; } }
+
+.app-header { grid-area: header; display: flex; justify-content: space-between; align-items: center; gap: 10px; min-width: 0; }
+.brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+.brand h1 { margin: 0; font-family: "Arial Black", "Helvetica Neue", sans-serif; font-size: 27px; font-weight: 900; letter-spacing: -.065em; line-height: 1; }
+.brand h1 > span { color: var(--mint); }
+.preview-tag { color: var(--quiet); font-size: 12px; white-space: nowrap; }
+.session-tools { display: flex; align-items: center; gap: 5px; flex: 0 0 auto; }
+.tool-button { display: inline-flex; justify-content: center; align-items: center; gap: 5px; min-height: 44px; min-width: 44px; padding: 0 9px; border: 1px solid transparent; border-radius: 12px; background: transparent; color: var(--muted); font-size: 13px; white-space: nowrap; }
+.tool-button[aria-pressed="true"] { border-color: #547078; background: #173438; color: #c8fff3; }
+.tool-symbol { font-size: 21px; line-height: 1; }
+.pause-symbol { font-size: 16px; line-height: 1; }
+.icon-only { font-size: 18px; border-color: #2d354c; border-radius: 50%; padding: 0; }
+
+.club-hud { grid-area: hud; display: grid; grid-template-columns: 1.35fr 1fr 1fr; padding: 10px 0 9px; border-bottom: 1px solid #2c334b; }
+.hud-item { min-width: 0; padding-left: 16px; border-left: 1px solid #2c334b; }
+.hud-item:first-child { padding-left: 0; border-left: 0; }
+.hud-caption { display: flex; align-items: center; gap: 6px; color: var(--muted); font-size: 12px; line-height: 1.4; white-space: nowrap; }
+.hud-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--mint); }
+.hud-value { display: block; margin-top: 3px; font-size: clamp(22px, 6.4vw, 30px); line-height: 1.15; font-weight: 650; letter-spacing: -.04em; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.money .hud-value { color: var(--mint); }
+.mood .hud-value { color: #e1d4ff; }
+.goal-strip { grid-area: goal; min-width: 0; padding: 2px 0; }
+.goal-heading { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.day-badge { flex: 0 0 auto; font-size: 13px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+.mode-badge { color: var(--violet); font-size: 12px; white-space: nowrap; }
+.goal-label { flex: 1; min-width: 0; text-align: right; color: var(--muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+#goal-progress { display: block; appearance: none; width: 100%; height: 3px; margin-top: 8px; border: 0; border-radius: 3px; overflow: hidden; color: var(--mint); background: #2a3147; }
+#goal-progress::-webkit-progress-bar { background: #2a3147; border-radius: 3px; }
+#goal-progress::-webkit-progress-value { background: var(--mint); border-radius: 3px; }
+#goal-progress::-moz-progress-bar { background: var(--mint); border-radius: 3px; }
+
+.club-stage { grid-area: stage; position: relative; min-width: 0; min-height: 0; }
+#club-canvas { display: block; width: 100%; height: 100%; min-height: 0; border: 0; outline-offset: -3px; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+.notice { grid-area: notice; align-self: center; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; margin: 0; color: #c3cbdf; font-size: 13px; line-height: 1.45; text-align: center; }
+.game-nav { grid-area: nav; display: grid; grid-template-columns: 1fr 1.35fr 1fr; gap: 9px; min-width: 0; }
+.nav-button { display: flex; align-items: center; justify-content: center; gap: 7px; min-width: 0; min-height: 56px; padding: 0 10px; border: 1px solid #3d4864; border-radius: 17px; background: #1c243b; color: #e9edf9; font-size: 16px; line-height: 1.2; font-weight: 600; white-space: nowrap; }
+.nav-icon { color: var(--violet); font-size: 19px; line-height: 1; }
+.happy-button { border-color: var(--mint); background: var(--mint); color: #102a2a; }
+.happy-button .nav-icon { color: inherit; }
+.happy-button[aria-pressed="true"] { background: var(--peach); border-color: #ffd8bc; color: #352418; }
+.menu-symbol { font-size: 16px; }
+.session-footer { grid-area: footer; display: flex; justify-content: center; align-items: center; gap: 5px; color: var(--quiet); font-size: 11px; line-height: 1.5; }
+.save-indicator { width: 4px; height: 4px; border-radius: 50%; background: #78a597; }
+
+.welcome { position: relative; padding: 0 14px 18px; text-align: center; }
+.welcome-copy { margin-bottom: 23px; }
+.eyebrow { color: var(--mint); font-family: "Helvetica Neue", Arial, sans-serif; font-size: 10px; font-weight: 650; letter-spacing: .2em; }
+.welcome h2 { margin: 10px 0 12px; font-size: clamp(27px, 7vw, 38px); line-height: 1.25; font-weight: 650; letter-spacing: -.05em; white-space: nowrap; }
+.welcome h2 > span { color: var(--violet); }
+.welcome p { margin: 0; color: var(--muted); font-size: 15px; line-height: 1.7; }
+.welcome-actions { width: min(100%, 420px); margin: 0 auto; }
+.mode-actions { display: grid; grid-template-columns: 1.25fr 1fr; gap: 10px; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; min-height: 52px; min-width: 44px; padding: 12px 18px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-raised); color: var(--text); font-size: 16px; font-weight: 600; line-height: 1.35; }
+.button.primary { color: #122c2c; background: var(--mint); border-color: var(--mint); }
+.button.secondary { color: #e0def3; background: #23273c; border-color: #45485f; }
+.button.danger { color: #2c181b; background: var(--danger); border-color: var(--danger); }
+.continue-button { justify-content: space-between; width: 100%; margin-bottom: 10px; }
+.continue-button:not([hidden]) + .mode-actions .primary { color: var(--text); background: #23273c; border-color: #45485f; }
+.continue-button:not([hidden]) + .mode-actions .button { min-height: 46px; font-size: 14px; }
+body[data-screen="welcome"] .club-app { grid-template-areas: "header" "stage"; grid-template-rows: 48px minmax(0, 1fr); }
+body[data-screen="welcome"] .club-hud,
+body[data-screen="welcome"] .goal-strip,
+body[data-screen="welcome"] .notice,
+body[data-screen="welcome"] .game-nav,
+body[data-screen="welcome"] .session-footer,
+body[data-screen="welcome"] #pause-toggle { display: none; }
+body[data-screen="welcome"] .club-stage { display: grid; grid-template-rows: minmax(160px, 1fr) auto; }
+body[data-screen="game"] #welcome { display: none; }
+
+.game-panel { position: fixed; inset: 0; width: min(480px, calc(100vw - 24px)); max-width: none; max-height: calc(100vh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); max-height: calc(100dvh - 28px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); margin: auto; padding: 0; border: 1px solid #505a78; border-radius: 24px; background: #191f33; color: var(--text); box-shadow: 0 20px 80px #0008; }
+.game-panel[open] { display: flex; flex-direction: column; }
+.game-panel::backdrop { background: #050914bf; }
+.panel-header { display: grid; grid-template-columns: 44px minmax(0, 1fr) 44px; gap: 5px; align-items: center; flex: 0 0 auto; padding: 13px 12px 4px; }
+.panel-header h2 { grid-column: 2; grid-row: 1; margin: 0; text-align: center; font-size: 21px; line-height: 1.35; font-weight: 650; overflow-wrap: anywhere; }
+.panel-icon-button { display: grid; place-items: center; min-width: 44px; min-height: 44px; padding: 0; border: 0; border-radius: 12px; background: transparent; color: #d5ddf2; font-size: 27px; line-height: 1; }
+#panel-back { grid-column: 1; grid-row: 1; font-size: 25px; }
+#panel-close { grid-column: 3; grid-row: 1; }
+.panel-subtitle { flex: 0 0 auto; margin: 0; padding: 1px 22px 16px; color: var(--muted); font-size: 14px; line-height: 1.55; text-align: center; }
+.panel-subtitle:empty { display: none; }
+.panel-body { min-height: 0; padding: 8px 18px 18px; overflow: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; scrollbar-width: thin; scrollbar-color: #57637e transparent; }
+.panel-actions { display: flex; gap: 10px; flex: 0 0 auto; padding: 14px 18px 18px; border-top: 1px solid #343d58; background: #191f33; }
+.panel-actions:empty { display: none; }
+.panel-actions > .button { flex: 1 1 0; min-width: 0; }
+.menu-grid { display: grid; gap: 9px; }
+.menu-row { display: grid; grid-template-columns: 39px minmax(0, 1fr) auto; gap: 10px; align-items: center; width: 100%; min-height: 70px; padding: 12px 13px; border: 1px solid #3b4560; border-radius: 15px; background: #242c44; color: var(--text); text-align: left; }
+.row-icon { display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 12px; background: #343d59; color: var(--mint); font-size: 20px; }
+.row-copy { min-width: 0; }
+.row-title { display: block; font-size: 16px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.row-detail { display: block; margin-top: 4px; color: #b6c1da; font-size: 13px; line-height: 1.5; overflow-wrap: anywhere; }
+.row-value { color: var(--mint); font-size: 14px; font-weight: 600; line-height: 1.4; text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.menu-row[aria-disabled="true"], .menu-row:disabled { background: #1e253a; border-color: #323b53; }
+.menu-row[aria-disabled="true"] .row-value, .menu-row:disabled .row-value { color: #b9b3cf; }
+.menu-row:disabled .row-title { color: #aeb7cf; }
+.menu-row.is-selected { border-color: var(--mint); background: #273c45; }
+.menu-row.is-owned .row-value { color: var(--violet); }
+.dialog-copy { color: #dce2f3; font-size: 16px; line-height: 1.8; overflow-wrap: anywhere; }
+.dialog-copy p { margin: 0 0 14px; }
+.dialog-copy p:last-child { margin-bottom: 0; }
+.dialog-copy strong { color: var(--text); }
+.dialog-copy .muted, .muted { color: var(--muted); }
+.dialog-copy .hint, .hint { color: var(--muted); font-size: 14px; line-height: 1.65; }
+.stat-list { display: grid; gap: 0; margin: 0; font-variant-numeric: tabular-nums; }
+.stat-list > div { display: flex; align-items: baseline; justify-content: space-between; gap: 20px; padding: 13px 0; border-bottom: 1px solid #343d56; }
+.stat-list > div:last-child { border-bottom: 0; }
+.stat-list dt { color: var(--muted); font-size: 15px; }
+.stat-list dd { margin: 0; color: var(--text); font-size: 17px; font-weight: 600; text-align: right; }
+.panel-section-title { margin: 16px 0 10px; color: #d6def2; font-size: 14px; font-weight: 600; }
+.panel-section-title:first-child { margin-top: 0; }
+.empty-state { margin: 12px 0; color: var(--muted); text-align: center; font-size: 15px; line-height: 1.7; }
+
+button { transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
+.button:active, .nav-button:active { transform: translateY(1px); filter: brightness(.92); }
+.menu-row:active, .panel-icon-button:active { background: #35435b; }
+@media (hover: hover) {
+  .tool-button:hover, .panel-icon-button:hover { background: #252e45; color: #fff; }
+  .menu-row:hover { background: #2d3852; border-color: #62748e; }
+  .button:hover, .nav-button:hover { filter: brightness(1.08); }
+}
+@media (max-width: 420px) {
+  .preview-tag { display: none; }
+  .welcome { padding-left: 5px; padding-right: 5px; }
+}
+@media (max-width: 350px) {
+  .club-app { padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(10px, env(safe-area-inset-right)); }
+  .brand h1 { font-size: 25px; }
+  .session-tools { gap: 1px; }
+  .tool-button { padding: 0 6px; font-size: 12px; }
+  .hud-item { padding-left: 10px; }
+  .hud-value { font-size: 22px; }
+  .game-nav { gap: 6px; }
+  .nav-button { gap: 4px; padding: 0 5px; font-size: 15px; }
+  .goal-label { font-size: 11px; }
+  .welcome h2 { font-size: 26px; }
+  .menu-row { grid-template-columns: 32px minmax(0, 1fr) auto; gap: 8px; padding: 10px; }
+  .row-icon { width: 30px; height: 32px; font-size: 18px; }
+  .row-value { font-size: 13px; }
+  .panel-body { padding-left: 13px; padding-right: 13px; }
+}
+@media (max-height: 650px) and (orientation: portrait) {
+  .club-app { grid-template-rows: 44px auto auto minmax(140px, 1fr) 34px 50px 16px; gap: 5px; padding-top: max(6px, env(safe-area-inset-top)); padding-bottom: max(6px, env(safe-area-inset-bottom)); }
+  .club-hud { padding: 5px 0 7px; }
+  .hud-value { font-size: 23px; }
+  .goal-strip { padding: 0; }
+  .nav-button { min-height: 50px; }
+  body[data-screen="welcome"] .club-app { grid-template-rows: 44px minmax(0, 1fr); }
+  body[data-screen="welcome"] .club-stage { grid-template-rows: minmax(145px, 1fr) auto; }
+  .welcome { padding-bottom: 6px; }
+  .welcome-copy { margin-bottom: 13px; }
+  .welcome h2 { margin: 6px 0 7px; font-size: 27px; }
+  .welcome p { font-size: 14px; line-height: 1.5; }
+  .welcome-break { display: none; }
+  .button { min-height: 48px; }
+}
+@media (orientation: landscape) and (max-height: 560px) and (max-width: 1200px) {
+  .club-app {
+    width: min(100%, 1100px);
+    min-height: 320px;
+    grid-template-areas: "stage header" "stage hud" "stage goal" "stage notice" "stage nav" "stage footer";
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 310px);
+    grid-template-rows: 44px auto auto minmax(30px, 1fr) 52px 16px;
+    gap: 6px 18px;
+    padding-top: max(8px, env(safe-area-inset-top));
+    padding-bottom: max(8px, env(safe-area-inset-bottom));
+  }
+  .preview-tag { display: none; }
+  .brand h1 { font-size: 25px; }
+  .session-tools { gap: 1px; }
+  .tool-button { padding: 0 5px; font-size: 12px; }
+  .hud-value { font-size: 24px; }
+  .club-hud { padding: 5px 0 8px; }
+  .nav-button { min-height: 52px; gap: 5px; padding: 0 6px; font-size: 15px; }
+  .notice { font-size: 12px; }
+  .goal-label { font-size: 11px; }
+  body[data-screen="welcome"] .club-app { grid-template-areas: "stage header" "stage welcome"; grid-template-columns: minmax(0, 1fr) minmax(270px, 330px); grid-template-rows: 44px minmax(0, 1fr); }
+  body[data-screen="welcome"] .club-stage { display: contents; }
+  body[data-screen="welcome"] #club-canvas { grid-area: stage; }
+  body[data-screen="welcome"] .welcome { grid-area: welcome; align-self: center; padding: 0 2px; }
+  .welcome h2 { font-size: 27px; margin: 7px 0 9px; }
+  .welcome-copy { margin-bottom: 15px; }
+  .welcome p { font-size: 14px; }
+  .welcome .button { padding-left: 12px; padding-right: 12px; min-height: 48px; }
+  .game-panel { max-height: calc(100dvh - 20px); border-radius: 19px; }
+  .panel-header { padding-top: 6px; }
+  .panel-subtitle { padding-bottom: 9px; }
+  .panel-actions { padding-top: 9px; padding-bottom: 11px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; scroll-behavior: auto !important; }
+}
+
+</style>
+  
+  
+  
+  
+  
+  
+<meta name="disco-club-app" content="yes">
+<link rel="manifest" href="./app.webmanifest">
+<link rel="apple-touch-icon" href="./icon-180.png">
+</head>
+<body data-screen="welcome">
+  <main class="club-app" aria-labelledby="club-title">
+    <header class="app-header">
+      <div class="brand">
+        <h1 id="club-title">DISCO<span aria-hidden="true">.</span></h1>
+        <span class="preview-tag">新舞厅</span>
+      </div>
+      <div class="session-tools" aria-label="游戏设置">
+        <button id="sound-toggle" class="tool-button" type="button" aria-pressed="false" aria-label="开启音乐">
+          <span class="tool-symbol" aria-hidden="true">♪</span><span data-label>音乐</span>
+        </button>
+        <button id="pause-toggle" class="tool-button" type="button" aria-pressed="false" aria-label="暂停营业">
+          <span class="pause-symbol" aria-hidden="true">Ⅱ</span><span data-label>暂停</span>
+        </button>
+        <button id="help-toggle" class="tool-button icon-only" type="button" aria-label="使用说明"><span aria-hidden="true">?</span></button>
+      </div>
+    </header>
+
+    <section class="club-hud" aria-label="经营数据">
+      <div class="hud-item money">
+        <span class="hud-caption"><span class="hud-dot" aria-hidden="true"></span>营业资金</span>
+        <strong id="cash-value" class="hud-value">$2,000</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-caption">舞厅客人</span>
+        <strong id="visitors-value" class="hud-value">3</strong>
+      </div>
+      <div class="hud-item mood">
+        <span class="hud-caption">开心指数</span>
+        <strong id="mood-value" class="hud-value">2%</strong>
+      </div>
+    </section>
+
+    <section class="goal-strip" aria-label="营业进度">
+      <div class="goal-heading">
+        <span class="day-badge" id="day-value">第 1 天</span>
+        <span class="mode-badge" id="mode-label">自由经营</span>
+        <span id="goal-label" class="goal-label">把今晚经营得更好</span>
+      </div>
+      <progress id="goal-progress" max="1" value="0" aria-label="经营目标进度"></progress>
+    </section>
+
+    <section id="club-stage" class="club-stage" aria-label="你的舞厅">
+      <canvas id="club-canvas" width="900" height="760" tabindex="0" role="img" aria-label="迪斯科舞厅。经营时可轻点设备查看升级。">当前浏览器需要支持 Canvas 才能显示舞厅。</canvas>
+      <section id="welcome" class="welcome" aria-labelledby="welcome-title">
+        <div class="welcome-copy">
+          <span class="eyebrow">YOUR CLUB. YOUR NIGHT.</span>
+          <h2 id="welcome-title">今晚，由你开场<span aria-hidden="true">。</span></h2>
+          <p>没有期限，把小舞厅经营成<br class="welcome-break">你的夜生活地标。</p>
+        </div>
+        <div class="welcome-actions">
+          <button id="continue-button" class="button primary continue-button" type="button" hidden><span>继续营业</span><span aria-hidden="true">↗</span></button>
+          <div class="mode-actions">
+            <button id="free-button" class="button primary" type="button"><span>自由经营</span><span aria-hidden="true">↗</span></button>
+            <button id="challenge-button" class="button secondary" type="button">挑战模式</button>
+          </div>
+        </div>
+      </section>
+    </section>
+
+    <p id="notice" class="notice" role="status" aria-live="polite" aria-atomic="true">轻点舞厅设备，或打开经营菜单。</p>
+
+    <nav class="game-nav" aria-label="舞厅操作">
+      <button id="manage-button" class="nav-button manage-button" type="button"><span class="nav-icon" aria-hidden="true">✦</span><span>经营</span></button>
+      <button id="happy-button" class="nav-button happy-button" type="button" aria-pressed="false"><span class="nav-icon" aria-hidden="true">♫</span><span>欢乐时间</span></button>
+      <button id="menu-button" class="nav-button menu-button" type="button"><span class="nav-icon menu-symbol" aria-hidden="true">☰</span><span>菜单</span></button>
+    </nav>
+
+    <footer class="session-footer"><span class="save-indicator" aria-hidden="true"></span><span id="save-label">进度自动保存</span></footer>
+  </main>
+
+  <dialog id="game-panel" class="game-panel" aria-labelledby="panel-title" aria-describedby="panel-subtitle">
+    <header class="panel-header">
+      <button id="panel-back" class="panel-icon-button" type="button" aria-label="返回上一级" hidden><span aria-hidden="true">←</span></button>
+      <h2 id="panel-title">经营舞厅</h2>
+      <button id="panel-close" class="panel-icon-button" type="button" aria-label="关闭菜单"><span aria-hidden="true">×</span></button>
+    </header>
+    <p id="panel-subtitle" class="panel-subtitle"></p>
+    <div id="panel-body" class="panel-body"></div>
+    <footer id="panel-actions" class="panel-actions"></footer>
+  </dialog>
+<script>
+/* Disco simulation: a browser translation of the fixed-point Nokia game rules.
+ * Provenance and known differences are recorded in reference/mechanics.md.
+ * No Java bytecode is executed by this file. */
+(function (root) {
+  'use strict';
+  const trunc = Math.trunc;
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+  const MONEY = 16384, PEOPLE = 128, STEP = 20;
+  const CATEGORY_IDS = { lights: 1, floor: 2, dancer: 3, ball: 4, speakers: 31, decks: 32 };
+  const CATALOG = {};
+  const tiers = (category, id, name, prices, description) => {
+    let factor = 0;
+    CATALOG[category] = prices.map((cost, index) => {
+      factor = index ? trunc(factor * 110 / 100) : trunc(1024 * 70 / 100);
+      return Object.freeze({ category, id, tier: index + 1, label: prices.length === 1 ? name : `${name} ${index + 1}`,
+        cost, effect: trunc(cost * factor / 500), description });
+    });
+  };
+  tiers('lights', 1, '灯光', [500, 700, 1000, 1200, 1500, 1700], '改善灯光，让舞厅更有气氛。');
+  tiers('floor', 2, '舞池', [800, 1600, 2400], '扩建舞池，容纳更多客人。');
+  tiers('dancer', 3, '舞者', [1000, 2000], '聘请舞者，持续提高舞厅气氛。');
+  tiers('ball', 4, '迪斯科球', [100], '购买迪斯科球，为舞厅添点光彩。');
+  tiers('speakers', 31, '音响', [1000, 1500, 2000, 2500, 3000], '升级音响，让音乐响彻舞池。');
+  tiers('decks', 32, 'DJ台', [500, 1000, 2000], '升级控制设备，让更好的DJ愿意登台。');
+  const hostNames = ['DJ Crash', 'DJ Fiasco', 'DJ Dany', 'DJ Nurse', 'DJ Robot', 'DJ Loop', 'DJ Alfa C.'];
+  const hostDescriptions = [
+    '力量型DJ，设备能不能撑住就看运气了。', '初出茅庐，可能精彩，也可能砸场。',
+    '曾是传教士，现在用音乐感染观众。', '颇有名气的本地新星。',
+    'Groove博士创造的机器人，表现稳定。', '世界级DJ，能让全场热起来。', '最顶尖的DJ，带来最火热的舞会。'
+  ];
+  CATALOG.host = [300, 500, 800, 1200, 1800, 2500, 3500].map((cost, i) => Object.freeze({
+    category: 'host', id: 51 + i, tier: i + 1, label: hostNames[i], cost,
+    effect: trunc(cost * trunc(1024 * 90 / 100) / 500),
+    required: [0, 0, 1, 1, 2, 2, 3][i], duration: 30, description: hostDescriptions[i]
+  }));
+  CATALOG.advertising = [
+    { id: 73, label: '传单广告', cost: 300, description: '向附近的人派发传单。客人越多，效果越好。' },
+    { id: 71, label: '报纸广告', cost: 600, description: '刊登报纸广告，吸引一批新客人。' },
+    { id: 72, label: '电视广告', cost: 1000, description: '投放电视广告，让更多人知道你的舞厅。' },
+    { id: 74, label: '会员派对', cost: 4000, description: '举办主题派对，附带DJ和特别活动。' }
+  ].map((item, i) => Object.freeze({ ...item, category: 'advertising', tier: i + 1, effect: 0 }));
+  for (const entries of Object.values(CATALOG)) Object.freeze(entries);
+  Object.freeze(CATALOG);
+  const OBJECTIVES = Object.freeze([
+    Object.freeze({ level: 1, title: '赚到一万美元', description: '在31天内，让资金达到 $10000。', target: 10000, metric: 'cash', startCash: 2000 }),
+    Object.freeze({ level: 2, title: '完美的派对', description: '让开心指数达到100。', target: 100, metric: 'happiness', startCash: 1500 }),
+    Object.freeze({ level: 3, title: '全城来跳舞', description: '让舞厅里的人数达到300。', target: 300, metric: 'visitors', startCash: 1000 })
+  ]);
+  const FREE_OBJECTIVE = Object.freeze({ level: 1, title: '自由经营',
+    description: '没有营业天数和通关目标限制，按自己的节奏经营舞厅。',
+    target: null, metric: null, startCash: 2000 });
+  const EVENT_WEIGHTS = [0, 1, 2, 3, 5, 5, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11];
+  const EVENT_QUOTAS = [1, 1, 1, 1, 1, 3, 2, 5, -1, 5, 1, -1];
+  const EVENT_LABELS = {
+    0: '外星来客', 1: '护士学校的聚会', 2: '猴子闯入舞厅', 3: 'DJ Ape登场',
+    5: '客人嫌音乐太小', 6: '舞池太拥挤', 7: '设备损坏', 8: 'DJ的状况',
+    9: '需要新的视觉效果', 10: '明星到访', 11: '舞厅缺少DJ'
+  };
+  class Game {
+    constructor(options = {}) {
+      this.seed = Number.isFinite(options.seed) ? options.seed >>> 0 : (Date.now() >>> 0);
+      this.randomEvents = options.randomEvents !== false;
+      this._messages = [];
+      this.start(1, { mode: options.mode });
+    }
+    start(level = 1, options = {}) {
+      const mode = options.mode === undefined ? 'challenge' : options.mode;
+      if (!['challenge', 'free'].includes(mode)) throw new TypeError('Unknown game mode.');
+      level = clamp(trunc(Number(level) || 1), 1, 3);
+      this._carry = 0;
+      this._messages = [];
+      this._r = {
+        money: (mode === 'free' ? FREE_OBJECTIVE : OBJECTIVES[level - 1]).startCash * MONEY, mood: 49152, people: 384, arrivals: 384,
+        baseMood: 491520, targetMood: 0, floor: 0, loan: 0, fatigue: 0, happy: false,
+        dj: 0, djPower: 0, djTime: 0, party: 0, partyPower: 0,
+        sinceDJ: 0, sincePurchase: 0, elapsed: 1, moodSum: 0, peopleSum: 0,
+        sampleIndex: 0, samples: new Array(10).fill(0), items: {},
+        event: null, eventCooldown: 0, eventPower: 0, eventQuotas: EVENT_QUOTAS.slice(),
+        advertised: false, borrowed: false, notices: { advertising: false, loan: false },
+        level, mode, needsRecovery: false, recoveries: 0,
+        status: 'playing', reason: '', sequence: 0, lastNotice: ''
+      };
+      this._sync();
+      return this.state;
+    }
+    startFree() { return this.start(1, { mode: 'free' }); }
+    _rand(min, max) {
+      // Saved deterministic RNG replaces java.util.Random without changing ranges.
+      this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+      return min + (max > min ? this.seed % (max - min) : 0);
+    }
+    _emit(message) {
+      this._r.lastNotice = message;
+      this._r.sequence++;
+      this._messages.push(message);
+      if (this._messages.length > 12) this._messages.shift();
+    }
+    drainMessages() { return this._messages.splice(0); }
+    _tier(category) { return this._r.items[CATEGORY_IDS[category]]?.tier || 0; }
+    _sync() {
+      const r = this._r;
+      const rawMood = Math.floor(r.mood / MONEY);
+      const cash = Math.floor(r.money / MONEY);
+      const visitors = Math.floor(r.people / PEOPLE);
+      const equipment = {};
+      for (const category of Object.keys(CATEGORY_IDS)) equipment[category] = this._tier(category);
+      const happiness = clamp(trunc(100 * rawMood / 150), 0, 100);
+      const free = r.mode === 'free';
+      const objective = free ? FREE_OBJECTIVE : OBJECTIVES[r.level - 1];
+      const value = objective.metric === 'cash' ? cash : objective.metric === 'visitors' ? visitors : happiness;
+      this.state = {
+        level: r.level, mode: r.mode, needsRecovery: r.needsRecovery, recoveries: r.recoveries,
+        status: r.status, reason: r.reason, cash: Math.max(0, cash), visitors,
+        happiness, rawMood, day: Math.floor(r.elapsed / 30000) + 1, elapsed: (r.elapsed - 1) / 1000,
+        dayProgress: ((r.elapsed - 1) % 30000) / 30000, secondsLeft: free ? null : Math.max(0, 900 - trunc(r.elapsed / 1000)),
+        equipment, happyHour: r.happy, loan: Math.max(0, Math.floor(r.loan / MONEY)),
+        adFatigue: Math.round(100 * r.fatigue / 75000),
+        host: { id: r.dj, tier: r.dj >= 51 && r.dj <= 57 ? r.dj - 50 : 0,
+          name: r.dj === 58 ? 'DJ Ape' : (CATALOG.host.find(x => x.id === r.dj)?.label || '无DJ'),
+          remaining: Math.max(0, r.djTime / 1000), active: r.djPower !== 0 },
+        party: { type: r.party, active: r.partyPower !== 0 },
+        event: r.event ? { id: r.event.id, label: EVENT_LABELS[r.event.id], elapsed: r.event.time / 1000 } : null,
+        notice: { id: r.sequence, text: r.lastNotice },
+        progress: free ? 0 : clamp(value / objective.target, 0, 1), objective,
+        score: cash + Math.floor(r.peopleSum / r.elapsed) * 10 + Math.floor(r.moodSum / r.elapsed) * 100,
+        crowdGrowing: r.arrivals - r.people > 256, moodGrowing: r.targetMood - r.mood > 49152
+      };
+    }
+    canBuy(category, tier) {
+      const item = CATALOG[category]?.find(item => item.tier === Number(tier));
+      if (!item) return { ok: false, message: '没有这个商品。' };
+      if (this._r.status !== 'playing') return { ok: false, message: '请先开始游戏。' };
+      if (this._r.needsRecovery) return { ok: false, message: '请先重整营业，再购买设备。' };
+      if (category !== 'host' && category !== 'advertising' && this._tier(category) >= item.tier)
+        return { ok: false, message: '已经拥有这个级别或更好的设备。' };
+      if (category === 'host' && this._r.dj === item.id)
+        return { ok: false, message: '这位DJ正在表演。' };
+      if (Math.floor(this._r.money / MONEY) <= item.cost)
+        return { ok: false, message: '资金不足，请保留一些营业资金。' };
+      if (category === 'host') {
+        if (this._tier('decks') < item.required) return { ok: false, message: `需要 ${item.required} 级DJ台。` };
+        if (this._tier('speakers') < item.required) return { ok: false, message: `需要 ${item.required} 级音响。` };
+      }
+      return { ok: true, message: '', item };
+    }
+    buy(category, tier) {
+      const check = this.canBuy(category, tier);
+      if (!check.ok) return check;
+      const item = check.item, r = this._r;
+      r.money -= item.cost * MONEY;
+      r.sincePurchase = 0;
+      if (category === 'host') {
+        r.dj = item.id;
+        r.djTime = 30000;
+        r.djPower = item.id < 54 ? this._rand(trunc(item.effect / 2), item.effect) : item.effect;
+      } else if (category === 'advertising') {
+        r.advertised = true;
+        if (item.id === 71 || item.id === 72) {
+          const reach = Math.max(3700, 37000 - r.fatigue);
+          r.arrivals += trunc(reach * (item.id === 71 ? 40 : 80) / 37000) * PEOPLE;
+          r.fatigue += item.id === 71 ? 11000 : 15000;
+        } else if (item.id === 73) {
+          const reach = Math.max(740, 37000 - r.fatigue);
+          const extra = Math.min(20, trunc(reach * trunc(40 * Math.floor(r.people / PEOPLE) / 100) / 37000));
+          r.arrivals += extra * PEOPLE;
+          r.fatigue += 8000;
+        } else {
+          r.djTime = 30000;
+          r.dj = 51 + this._rand(3, 6);
+          r.djPower = 1;
+          r.party = this._rand(0, 3);
+          r.partyPower = this._rand(8000, 16000);
+        }
+      } else {
+        r.items[item.id] = { tier: item.tier, power: item.effect };
+        if (category === 'floor') r.floor = item.tier;
+      }
+      const message = category === 'advertising' && item.id === 74
+        ? ['泡沫派对开始了！', '今晚是名人之夜！', '地中海之夜，饮料畅饮！'][r.party]
+        : `${item.label}${category === 'host' ? '已登台。' : '购买成功。'}`;
+      this._emit(message);
+      this._sync();
+      return { ok: true, message, item };
+    }
+    toggleHappyHour() {
+      const r = this._r;
+      if (r.status !== 'playing' || r.needsRecovery || r.money <= 0) return false;
+      r.happy = !r.happy;
+      this._sync();
+      return r.happy;
+    }
+    takeLoan() {
+      const r = this._r;
+      if (r.status !== 'playing') return { ok: false, message: '请先开始游戏。' };
+      if (r.needsRecovery) return { ok: false, message: '资金已用尽，请先重整营业。' };
+      if (r.loan > 0) return { ok: false, message: '请先还清上一笔贷款。' };
+      r.money += 1000 * MONEY;
+      r.loan += 1500 * MONEY;
+      r.borrowed = true;
+      this._emit('贷款到账 $1000，开始自动还款。');
+      this._sync();
+      return { ok: true, message: '贷款到账 $1000。' };
+    }
+    recoverFreeBusiness() {
+      const r = this._r;
+      if (r.mode !== 'free' || !r.needsRecovery)
+        return { ok: false, message: '只有自由模式资金耗尽后才能重整营业。' };
+      // Reopening keeps the venue and its history, but clears debt and temporary
+      // performances/events so recovery cannot immediately inherit a cash drain.
+      r.money = FREE_OBJECTIVE.startCash * MONEY;
+      r.loan = 0;
+      r.happy = false;
+      this._clearDJ();
+      r.sinceDJ = 0;
+      r.event = null;
+      r.eventPower = r.eventCooldown = 0;
+      r.needsRecovery = false;
+      r.reason = '';
+      r.recoveries++;
+      this._carry = 0;
+      const message = '重整完成：营业资金恢复至 $2000，贷款已清零，设备与营业天数保留。';
+      this._emit(message);
+      this._sync();
+      return { ok: true, message };
+    }
+    nextLevel() {
+      if (this._r.status !== 'won' || this._r.level >= 3) return false;
+      this.start(this._r.level + 1);
+      return true;
+    }
+    tick(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0 || this._r.status !== 'playing' || this._r.needsRecovery) return this.state;
+      this._carry += Math.min(seconds, 3600) * 1000;
+      while (this._carry + 1e-7 >= STEP && this._r.status === 'playing' && !this._r.needsRecovery) {
+        this._step(STEP);
+        this._carry -= STEP;
+      }
+      this._carry = this._r.needsRecovery ? 0 : Math.max(0, this._carry);
+      this._sync();
+      return this.state;
+    }
+    _step(ms) {
+      const r = this._r;
+      r.fatigue = clamp(r.fatigue - ms, 0, 75000);
+      if (r.dj < 1 || r.djTime <= 0) r.sinceDJ += ms;
+      else {
+        r.sinceDJ = 0;
+        r.djTime -= ms;
+        if (r.djTime <= 0) this._clearDJ();
+      }
+      r.sincePurchase += ms;
+      r.targetMood = Object.values(r.items).reduce((sum, item) => sum + item.power * PEOPLE, 0)
+        + r.djPower * PEOPLE + r.partyPower * PEOPLE + r.baseMood + r.eventPower;
+      if (r.happy) r.targetMood += trunc(160 * Math.floor(r.people / PEOPLE) / 100) * MONEY;
+      const crowded = r.people > [1920, 5760, 10240, 25600][r.floor];
+      if (r.targetMood > r.mood + 1920) {
+        r.mood += trunc(51200 * ms / 1000);
+        if (!crowded) r.baseMood += ms;
+      } else if (r.targetMood <= r.mood - 1920) {
+        r.mood -= trunc(51200 * ms / 1000);
+        if (r.targetMood > 0) r.baseMood -= ms;
+      }
+      if (crowded) r.baseMood -= ms;
+      const perPerson = r.people !== 0 ? trunc(r.mood / r.people) : 0;
+      r.samples[r.sampleIndex] = perPerson;
+      const average = trunc(r.samples.reduce((sum, value) => sum + value, 0) / 10);
+      r.sampleIndex = (r.sampleIndex + 1) % 10;
+      if (average - perPerson <= 2 && average - perPerson >= -2) r.baseMood -= ms;
+      if (perPerson > 160) r.people += trunc(55 * ms / 1000);
+      else if (perPerson <= 112) {
+        r.people = Math.max(0, r.people - trunc(768 * ms / 1000));
+        r.arrivals = Math.max(0, r.arrivals - trunc(768 * ms / 1000));
+      }
+      if (r.arrivals > r.people) r.people += trunc(440 * ms / 1000);
+      else r.arrivals = r.people;
+      if (r.people >= 38528) r.people = r.arrivals = 38528;
+      let operatingCost = trunc(163840 * ms / 1000);
+      if (r.loan > 0) {
+        const payment = trunc(84480 * ms / 1000);
+        r.loan = Math.max(0, r.loan - payment);
+        operatingCost += payment;
+        if (r.loan === 0) this._emit('贷款已还清，可以再次申请。');
+      }
+      r.money += trunc((r.happy ? -48 : 153) * r.people / 1000) * ms - operatingCost;
+      r.moodSum += Math.floor(r.mood / MONEY) * ms;
+      r.peopleSum += Math.floor(r.people / PEOPLE) * ms;
+      r.elapsed += ms;
+      if (r.mode === 'free' && r.money <= 0) {
+        r.money = 0;
+        r.happy = false;
+        r.needsRecovery = true;
+        r.reason = '营业资金已用尽，可以重整营业，保留舞厅设备继续经营。';
+        this._emit(r.reason);
+      } else if (r.money <= 0 && r.happy) r.happy = false;
+      else if (r.money <= 0 || (r.mode !== 'free' && trunc(r.elapsed / 1000) > 900)) {
+        r.status = 'lost';
+        r.reason = r.money <= 0 ? '营业资金已用尽。' : '时间到了，尚未完成挑战。';
+      }
+      if (r.status === 'playing' && !r.needsRecovery) {
+        if (this.randomEvents) this._events(ms);
+        this._tutorialNotices();
+      }
+      const won = r.level === 1 ? Math.floor(r.money / MONEY) >= 10000
+        : r.level === 2 ? trunc(100 * Math.floor(r.mood / MONEY) / 150) >= 100
+        : Math.floor(r.people / PEOPLE) >= 300;
+      if (r.mode !== 'free' && won) { r.status = 'won'; r.happy = false; r.reason = '挑战成功！'; }
+    }
+    _tutorialNotices() {
+      const r = this._r;
+      if (r.level !== 1) return;
+      if (r.elapsed > 25000 && !r.advertised && !r.notices.advertising) {
+        r.notices.advertising = true;
+        this._emit('这里太冷清了，试试广告，让大家知道你的舞厅。');
+      } else if (r.money < 400 * MONEY && !r.borrowed && !r.notices.loan) {
+        r.notices.loan = true;
+        this._emit('资金紧张？你可以在游戏选项里申请贷款。');
+      }
+    }
+    _clearDJ() {
+      const r = this._r;
+      r.dj = r.djPower = r.djTime = r.party = r.partyPower = 0;
+    }
+    _events(ms) {
+      const r = this._r;
+      if (!r.event) {
+        r.eventCooldown += ms;
+        if (r.eventCooldown < 10000) return;
+        r.eventCooldown = 0;
+        const id = EVENT_WEIGHTS[this._rand(0, EVENT_WEIGHTS.length)];
+        if (r.eventQuotas[id] === 0) return;
+        const mood = trunc(100 * Math.floor(r.mood / MONEY) / 150), people = Math.floor(r.people / PEOPLE);
+        const eligible = { 0: mood > 80, 1: people < 50, 2: people > 80 && r.money > 1500 * MONEY,
+          3: r.djPower === 0, 5: people > 50 && this._tier('speakers') < 5,
+          6: people > [15, 45, 80, 200][r.floor] && r.floor < 3,
+          7: people > 80 || (r.dj >= 51 && r.dj < 54), 8: people > 30 && r.djPower !== 0,
+          9: r.sincePurchase >= 40000, 10: mood > 40 && people < 80, 11: r.sinceDJ >= 20000 }[id];
+        if (!eligible) return;
+        r.eventQuotas[id]--;
+        r.event = { id, time: 0, stage: 0, speakerTier: this._tier('speakers') };
+        const power = { 0: -this._rand(4500, 5500), 1: this._rand(1625, 2275),
+          2: -this._rand(4500, 5500), 9: -7000, 10: 3250, 11: -14000 }[id];
+        if (power != null) r.eventPower = power * PEOPLE;
+        return;
+      }
+      const event = r.event, id = event.id, previous = event.time;
+      event.time += ms;
+      const elapsed = event.time;
+      const mood = trunc(100 * Math.floor(r.mood / MONEY) / 150), people = Math.floor(r.people / PEOPLE);
+      const threshold = [3, 5, 6, 7, 8, 11].includes(id) ? 1000 : 3000;
+      if (!event.stage && previous <= threshold && elapsed > threshold) {
+        event.stage = 1;
+        if (id === 3) { r.dj = 58; r.djPower = this._rand(2625, 3275); r.djTime = 30000; }
+        if (id === 5) r.eventPower = -this._rand(2625, 3275) * PEOPLE;
+        if (id === 6) r.eventPower = -this._rand(1000, 2000) * PEOPLE;
+        if (id === 7) {
+          const keys = Object.keys(r.items);
+          if (keys.length) {
+            const damaged = keys[this._rand(0, keys.length)], item = r.items[damaged];
+            item.tier--;
+            if (item.tier <= 0) delete r.items[damaged];
+            if (damaged === '2') r.floor = Math.max(0, item.tier);
+            const name = { 1: '灯光', 2: '舞池', 3: '舞者', 4: '迪斯科球', 31: '音响', 32: 'DJ台' }[damaged];
+            this._emit(damaged === '3' ? '一位舞者扭伤了脚，需要替换。' : `${name}发生损坏，需要维修升级。`);
+          }
+        } else if (id === 8) {
+          let variant = this._rand(0, 4);
+          if (variant > 0 && !(r.dj >= 51 && r.dj < 53)) variant = 0;
+          else if (variant > 0) { this._clearDJ(); r.sinceDJ = 0; }
+          this._emit(['客人们喜欢这首音乐，气氛越来越好了。', 'DJ厌倦了工作，离开了舞厅。', '客人不喜欢这位DJ，换一位试试。', '这位DJ今天不在状态。'][variant]);
+        } else this._emit({ 0: '外星人从轨道上看到派对，决定来凑个热闹！',
+          1: '当地护士学校的学生选择了这里聚会！', 2: '这些猴子怎么跑到舞厅来了？',
+          3: 'Groove博士的新发现：DJ Ape登台！', 5: '客人说音乐太小，但音响已开到最大。',
+          6: '舞池太拥挤，扩建一下吧。', 9: '该添些新灯光和视觉效果了。',
+          10: '一位著名流行歌手来到了舞厅！', 11: '这里太无聊，快请一位DJ吧。' }[id]);
+      }
+      const ended = {
+        0: mood < 60 || elapsed >= 30000, 1: elapsed >= 60000, 2: elapsed >= 30000,
+        3: elapsed >= 60000, 5: this._tier('speakers') > event.speakerTier || elapsed > 60000,
+        6: elapsed > 5000, 7: elapsed >= 1020, 8: elapsed >= 1020,
+        9: r.sincePurchase < 10000 || elapsed > 60000, 10: people > 100 || elapsed >= 60000,
+        11: r.sinceDJ === 0
+      }[id];
+      if (ended) { r.event = null; r.eventPower = 0; r.eventCooldown = 0; }
+    }
+    snapshot() {
+      return { version: 1, seed: this.seed, carry: this._carry, randomEvents: this.randomEvents,
+        raw: JSON.parse(JSON.stringify(this._r)) };
+    }
+    restore(data) {
+      try {
+        if (!data || data.version !== 1 || !data.raw || typeof data.raw !== 'object') return false;
+        const r = JSON.parse(JSON.stringify(data.raw));
+        // Version 1 saves made before free mode have no mode/recovery fields.
+        if (!Object.prototype.hasOwnProperty.call(r, 'mode')) r.mode = 'challenge';
+        if (!Object.prototype.hasOwnProperty.call(r, 'needsRecovery')) r.needsRecovery = false;
+        if (!Object.prototype.hasOwnProperty.call(r, 'recoveries')) r.recoveries = 0;
+        if (!['challenge', 'free'].includes(r.mode) || typeof r.needsRecovery !== 'boolean'
+          || !Number.isSafeInteger(r.recoveries) || r.recoveries < 0
+          || (r.mode === 'challenge' && (r.needsRecovery || r.recoveries !== 0))
+          || (r.mode === 'free' && (r.status !== 'playing' || r.money < 0
+            || r.needsRecovery !== (r.money === 0) || (r.needsRecovery && (r.happy || data.carry !== 0))))) return false;
+        const numbers = ['money', 'mood', 'people', 'arrivals', 'baseMood', 'targetMood', 'floor', 'loan',
+          'fatigue', 'dj', 'djPower', 'djTime', 'party', 'partyPower', 'sinceDJ', 'sincePurchase',
+          'elapsed', 'moodSum', 'peopleSum', 'sampleIndex', 'eventCooldown', 'eventPower', 'sequence'];
+        if (!numbers.every(key => Number.isFinite(r[key])) || !Number.isFinite(data.seed)
+          || !Number.isFinite(data.carry) || data.carry < 0 || data.carry > 3600000) return false;
+        if (![1, 2, 3].includes(r.level) || !['playing', 'won', 'lost'].includes(r.status)
+          || !Array.isArray(r.samples) || r.samples.length !== 10 || !r.samples.every(Number.isFinite)
+          || !Array.isArray(r.eventQuotas) || r.eventQuotas.length !== 12 || !r.eventQuotas.every(Number.isFinite)
+          || r.people < 0 || r.people > 38528 || !Number.isSafeInteger(r.elapsed) || r.elapsed < 1
+          || (r.mode === 'challenge' && r.elapsed > 902000)
+          || !Number.isInteger(r.floor) || r.floor < 0 || r.floor > 3
+          || !Number.isInteger(r.sampleIndex) || r.sampleIndex < 0 || r.sampleIndex > 9
+          || !r.items || typeof r.items !== 'object' || !r.notices || typeof r.notices !== 'object') return false;
+        for (const [id, item] of Object.entries(r.items)) {
+          const cat = Object.keys(CATEGORY_IDS).find(key => CATEGORY_IDS[key] === Number(id));
+          if (!cat || !item || !CATALOG[cat].some(entry => entry.tier === item.tier) || !Number.isFinite(item.power)) return false;
+        }
+        if (r.event && (!EVENT_WEIGHTS.includes(r.event.id) || !Number.isFinite(r.event.time) || !Number.isFinite(r.event.stage))) return false;
+        this._r = r;
+        this.seed = data.seed >>> 0;
+        this._carry = data.carry;
+        this.randomEvents = data.randomEvents !== false;
+        this._messages = [];
+        this._sync();
+        return true;
+      } catch (_) { return false; }
+    }
+  }
+  const api = Object.freeze({ Game, CATALOG, OBJECTIVES, FREE_OBJECTIVE, CATEGORY_IDS, DAY_SECONDS: 30 });
+  root.DiscoEngine = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI resources","songs":[{"file":"title.mid","format":1,"ticksPerQuarter":96,"duration":8.0,"tempos":[{"tick":0,"time":0.0,"microsecondsPerQuarter":500000,"bpm":120.0}],"programs":[{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":2,"program":44},{"time":0.0,"channel":2,"program":44}],"columns":["timeSeconds","durationSeconds","pitch","velocity","channel"],"notes":[[0.0,0.057292,42,99,9],[0.0,0.119792,93,99,2],[0.0,0.244792,33,99,0],[0.0,0.244792,36,99,9],[0.0,0.244792,67,99,1],[0.0,0.244792,69,99,1],[0.0,0.244792,73,99,1],[0.125,0.057292,42,99,9],[0.25,0.057292,46,99,9],[0.25,0.119792,45,99,0],[0.375,0.057292,67,99,1],[0.375,0.057292,69,99,1],[0.375,0.057292,73,99,1],[0.5,0.057292,42,99,9],[0.5,0.119792,33,99,0],[0.5,0.119792,93,99,2],[0.5,0.244792,36,99,9],[0.5,0.244792,39,99,9],[0.625,0.057292,42,99,9],[0.625,0.119792,45,99,0],[0.625,0.244792,64,99,1],[0.625,0.244792,67,99,1],[0.75,0.057292,46,99,9],[0.875,0.057292,33,99,0],[1.0,0.057292,42,99,9],[1.0,0.119792,93,99,2],[1.0,0.244792,33,99,0],[1.0,0.244792,36,99,9],[1.125,0.057292,42,99,9],[1.125,0.057292,73,99,1],[1.125,0.057292,76,99,1],[1.25,0.057292,46,99,9],[1.25,0.119792,45,99,0],[1.5,0.057292,42,99,9],[1.5,0.057292,73,99,1],[1.5,0.057292,76,99,1],[1.5,0.119792,33,99,0],[1.5,0.119792,93,99,2],[1.5,0.244792,36,99,9],[1.5,0.244792,39,99,9],[1.625,0.057292,42,99,9],[1.625,0.119792,45,99,0],[1.625,0.244792,67,99,1],[1.625,0.244792,71,99,1],[1.75,0.057292,46,99,9],[1.875,0.057292,33,99,0],[1.96875,0.057292,73,99,1],[2.0,0.057292,42,99,9],[2.0,0.119792,93,99,2],[2.0,0.244792,33,99,0],[2.0,0.244792,36,99,9],[2.0,0.869792,74,99,1],[2.125,0.057292,42,99,9],[2.25,0.057292,46,99,9],[2.25,0.119792,45,99,0],[2.5,0.057292,42,99,9],[2.5,0.119792,93,99,2],[2.5,0.244792,30,99,0],[2.5,0.244792,36,99,9],[2.5,0.244792,39,99,9],[2.625,0.057292,42,99,9],[2.75,0.057292,46,99,9],[2.75,0.119792,42,99,0],[2.875,0.244792,73,99,1],[3.0,0.057292,42,99,9],[3.0,0.119792,93,99,2],[3.0,0.244792,31,99,0],[3.0,0.244792,36,99,9],[3.125,0.057292,42,99,9],[3.125,0.119792,69,99,1],[3.25,0.057292,46,99,9],[3.25,0.119792,39,99,9],[3.25,0.119792,43,99,0],[3.25,0.494792,64,99,1],[3.5,0.057292,42,99,9],[3.5,0.119792,39,99,9],[3.5,0.244792,32,99,0],[3.5,0.244792,36,99,9],[3.5,0.369792,91,99,2],[3.625,0.057292,42,99,9],[3.75,0.057292,46,99,9],[3.75,0.119792,44,99,0],[4.0,0.057292,42,99,9],[4.0,0.119792,93,99,2],[4.0,0.244792,33,99,0],[4.0,0.244792,36,99,9],[4.0,0.244792,67,99,1],[4.0,0.244792,69,99,1],[4.0,0.244792,73,99,1],[4.125,0.057292,42,99,9],[4.25,0.057292,46,99,9],[4.25,0.119792,45,99,0],[4.375,0.057292,67,99,1],[4.375,0.057292,69,99,1],[4.375,0.057292,73,99,1],[4.5,0.057292,42,99,9],[4.5,0.119792,33,99,0],[4.5,0.119792,93,99,2],[4.5,0.244792,36,99,9],[4.5,0.244792,39,99,9],[4.625,0.057292,42,99,9],[4.625,0.119792,45,99,0],[4.75,0.057292,46,99,9],[4.875,0.057292,33,99,0],[4.875,0.057292,67,99,1],[4.875,0.057292,69,99,1],[4.875,0.057292,73,99,1],[5.0,0.057292,42,99,9],[5.0,0.119792,93,99,2],[5.0,0.244792,33,99,0],[5.0,0.244792,36,99,9],[5.125,0.057292,42,99,9],[5.25,0.057292,46,99,9],[5.25,0.057292,67,99,1],[5.25,0.057292,69,99,1],[5.25,0.057292,73,99,1],[5.25,0.119792,45,99,0],[5.5,0.057292,42,99,9],[5.5,0.119792,33,99,0],[5.5,0.119792,93,99,2],[5.5,0.244792,36,99,9],[5.5,0.244792,39,99,9],[5.625,0.057292,42,99,9],[5.625,0.057292,67,99,1],[5.625,0.057292,69,99,1],[5.625,0.057292,73,99,1],[5.625,0.119792,45,99,0],[5.75,0.057292,46,99,9],[5.875,0.057292,33,99,0],[6.0,0.057292,42,99,9],[6.0,0.057292,67,99,1],[6.0,0.057292,69,99,1],[6.0,0.057292,73,99,1],[6.0,0.119792,93,99,2],[6.0,0.244792,33,99,0],[6.0,0.244792,36,99,9],[6.125,0.057292,42,99,9],[6.25,0.057292,46,99,9],[6.25,0.119792,45,99,0],[6.5,0.057292,42,99,9],[6.5,0.119792,93,99,2],[6.5,0.244792,30,99,0],[6.5,0.244792,36,99,9],[6.5,0.244792,39,99,9],[6.625,0.057292,42,99,9],[6.75,0.057292,46,99,9],[6.75,0.119792,42,99,0],[6.875,0.057292,47,99,9],[6.9375,0.057292,47,99,9],[7.0,0.057292,42,99,9],[7.0,0.119792,93,99,2],[7.0,0.151042,52,99,9],[7.0,0.244792,31,99,0],[7.0,0.244792,36,99,9],[7.125,0.088542,47,99,9],[7.25,0.057292,46,99,9],[7.25,0.119792,39,99,9],[7.25,0.119792,43,99,0],[7.375,0.088542,41,99,9],[7.5,0.057292,42,99,9],[7.5,0.119792,39,99,9],[7.5,0.244792,32,99,0],[7.5,0.244792,36,99,9],[7.5,0.369792,91,99,2],[7.625,0.057292,42,99,9],[7.75,0.057292,46,99,9],[7.75,0.119792,44,99,0]]},{"file":"title2.mid","format":1,"ticksPerQuarter":96,"duration":9.142864,"tempos":[{"tick":0,"time":0.0,"microsecondsPerQuarter":571429,"bpm":104.999921}],"programs":[{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":2,"program":26},{"time":0.0,"channel":2,"program":26}],"columns":["timeSeconds","durationSeconds","pitch","velocity","channel"],"notes":[[0.0,0.065476,44,99,9],[0.0,0.136905,36,99,9],[0.0,0.279762,36,99,0],[0.0,0.279762,60,99,2],[0.0,0.279762,67,99,2],[0.0,0.279762,72,99,2],[0.285714,0.065476,44,62,9],[0.428572,0.065476,36,99,0],[0.428572,0.065476,60,98,2],[0.428572,0.065476,67,98,2],[0.428572,0.065476,72,98,2],[0.571429,0.065476,39,99,0],[0.571429,0.065476,44,101,9],[0.571429,0.136905,37,99,9],[0.571429,0.422619,60,99,1],[0.714286,0.065476,60,98,2],[0.714286,0.065476,67,98,2],[0.714286,0.065476,72,98,2],[0.714286,0.136905,36,99,9],[0.714286,0.279762,34,99,0],[0.857143,0.065476,44,96,9],[1.000001,0.065476,44,67,9],[1.000001,0.279762,36,99,0],[1.000001,0.279762,63,99,1],[1.142858,0.065476,44,38,9],[1.285715,0.994048,72,99,1],[1.428573,0.065476,36,99,0],[1.428573,0.065476,44,98,9],[1.428573,0.136905,36,99,9],[1.714287,0.065476,44,101,9],[1.714287,0.136905,37,99,9],[2.000002,0.065476,44,98,9],[2.142859,0.065476,36,99,9],[2.142859,0.136905,34,99,0],[2.285716,0.065476,44,98,9],[2.285716,0.136905,36,99,9],[2.285716,0.279762,36,99,0],[2.285716,0.851191,67,99,1],[2.285716,0.851191,70,99,1],[2.57143,0.065476,44,75,9],[2.714288,0.065476,36,99,0],[2.857145,0.065476,39,99,0],[2.857145,0.065476,44,98,9],[2.857145,0.136905,37,99,9],[3.000002,0.136905,36,99,9],[3.000002,0.279762,34,99,0],[3.14286,0.065476,44,73,9],[3.285717,0.065476,65,99,1],[3.285717,0.065476,69,99,1],[3.285717,0.208333,42,99,0],[3.428574,0.065476,44,99,9],[3.571431,0.065476,42,99,0],[3.571431,0.422619,63,99,1],[3.571431,0.422619,67,99,1],[3.714288,0.065476,41,99,0],[3.714288,0.065476,44,73,9],[3.714288,0.136905,36,99,9],[3.857146,0.065476,39,99,0],[4.000003,0.065476,41,99,0],[4.000003,0.065476,44,99,9],[4.000003,0.136905,37,99,9],[4.285717,0.065476,39,99,0],[4.285717,0.065476,44,99,9],[4.428575,0.065476,36,99,9],[4.428575,0.065476,44,69,9],[4.428575,0.136905,32,99,0],[4.500003,0.065476,36,99,9],[4.571432,0.065476,44,44,9],[4.571432,0.136905,36,99,9],[4.571432,0.279762,36,99,0],[4.857146,0.065476,44,99,9],[5.000004,0.065476,36,99,0],[5.142861,0.065476,39,99,0],[5.142861,0.065476,44,99,9],[5.142861,0.136905,37,99,9],[5.285718,0.136905,36,99,9],[5.285718,0.279762,34,99,0],[5.428575,0.065476,44,99,9],[5.571433,0.279762,36,99,0],[5.71429,0.065476,44,99,9],[6.000005,0.065476,36,99,0],[6.000005,0.065476,44,36,9],[6.000005,0.136905,36,99,9],[6.142862,0.065476,44,61,9],[6.285719,0.065476,44,99,9],[6.285719,0.136905,37,99,9],[6.571434,0.065476,44,99,9],[6.714291,0.065476,36,99,9],[6.714291,0.136905,34,99,0],[6.857148,0.065476,44,99,9],[6.857148,0.136905,36,99,9],[6.857148,0.279762,36,99,0],[7.142862,0.065476,44,99,9],[7.28572,0.065476,36,99,0],[7.428577,0.065476,39,99,0],[7.428577,0.065476,44,99,9],[7.428577,0.136905,37,99,9],[7.571434,0.136905,36,99,9],[7.571434,0.279762,34,99,0],[7.714291,0.065476,44,99,9],[7.857149,0.208333,42,99,0],[8.000006,0.065476,44,99,9],[8.071435,0.065476,44,75,9],[8.142863,0.065476,42,99,0],[8.142863,0.065476,44,99,9],[8.214292,0.065476,44,62,9],[8.285721,0.065476,41,99,0],[8.285721,0.065476,44,99,9],[8.285721,0.136905,36,99,9],[8.357149,0.065476,44,57,9],[8.428578,0.065476,39,99,0],[8.428578,0.065476,44,99,9],[8.500006,0.065476,44,73,9],[8.571435,0.065476,41,99,0],[8.571435,0.065476,44,99,9],[8.571435,0.136905,37,99,9],[8.785721,0.065476,44,99,9],[8.85715,0.065476,39,99,0],[9.000007,0.065476,36,99,9],[9.000007,0.065476,44,99,9],[9.000007,0.136905,32,99,0],[9.071435,0.065476,36,99,9]]}]};
+</script>
+<script>
+/*
+ * Disco's original MIDI notes and tempo, played by a small offline Web Audio
+ * synthesizer. This preserves the recovered melodies, not the exact Nokia
+ * soundfont/instrument timbres. Music data is supplied by window.DiscoMusic.
+ * No original Java code is executed here. Muted until the user enables sound.
+ */
+(function (global) {
+  'use strict';
+
+  const SILENCE = 0.0001;
+  const LOOKAHEAD = 0.2;
+  const MAX_VOICES = 48;
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+  class DiscoAudio {
+    constructor() {
+      this.enabled = false;
+      this.paused = false;
+      this.needsGesture = false;
+      this.scene = 'title';
+      this.context = null;
+      this.master = null;
+      this._voices = new Set();
+      this._song = null;
+      this._index = 0;
+      this._loopStart = null;
+      this._noise = null;
+      this._request = 0;
+    }
+
+    _createContext() {
+      if (this.context && this.context.state !== 'closed') return this.context;
+      if (this.context) this._reset();
+      const AudioContext = global.AudioContext || global.webkitAudioContext;
+      if (!AudioContext) return null;
+      const context = new AudioContext();
+      this.context = context;
+      context.onstatechange = () => {
+        if (context !== this.context) return;
+        if (context.state !== 'running') this._reset();
+        this.needsGesture = this.enabled && !this.paused && context.state !== 'running';
+        if (context.state === 'running' && (!this.enabled || this.paused)) this._suspend(context);
+      };
+      const master = context.createGain();
+      master.gain.value = 0.32;
+      const compressor = context.createDynamicsCompressor();
+      compressor.threshold.value = -12;
+      compressor.knee.value = 12;
+      compressor.ratio.value = 4;
+      compressor.attack.value = 0.004;
+      compressor.release.value = 0.15;
+      master.connect(compressor);
+      compressor.connect(context.destination);
+      this.master = master;
+      this._compressor = compressor;
+
+      const noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
+      const samples = noise.getChannelData(0);
+      // A fixed seed gives the percussion the same character on each run.
+      let seed = 0x6230;
+      for (let i = 0; i < samples.length; i++) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
+        samples[i] = ((seed >>> 0) / 0x80000000) - 1;
+      }
+      this._noise = noise;
+      return context;
+    }
+
+    get playing() {
+      return this.enabled && !this.paused && this.context?.state === 'running';
+    }
+
+    get state() {
+      return !this.enabled ? 'muted' : this.paused ? 'paused' : this.playing ? 'playing' : 'interrupted';
+    }
+
+    _suspend(context = this.context) {
+      if (!context || context.state === 'closed') return Promise.resolve();
+      // Older Safari can throw synchronously; rejected promises must also be handled.
+      try { return Promise.resolve(context.suspend()).catch(() => {}); }
+      catch (_) { return Promise.resolve(); }
+    }
+
+    _resume() {
+      let context;
+      try {
+        context = this._createContext();
+        if (!context) return Promise.resolve(false);
+        // Invoke resume before the first await, inside the original user gesture.
+        const pending = context.state === 'running' ? undefined : context.resume();
+        return Promise.resolve(pending).then(() => {
+          if (context !== this.context) return false;
+          if (!this.enabled || this.paused) {
+            this.needsGesture = false;
+            this._suspend(context);
+            return false;
+          }
+          this.needsGesture = context.state !== 'running';
+          if (!this.needsGesture) this.tick();
+          return !this.needsGesture;
+        }).catch(() => {
+          if (context === this.context) this.needsGesture = this.enabled && !this.paused && context.state !== 'running';
+          return false;
+        });
+      } catch (_) {
+        this.needsGesture = this.enabled && !this.paused;
+        return Promise.resolve(false);
+      }
+    }
+
+    resumeFromGesture() {
+      // Touching a game key must never turn on music that the user muted.
+      if (!this.enabled || this.paused) return Promise.resolve(false);
+      if (this.playing) { this.needsGesture = false; return Promise.resolve(true); }
+      return this._resume();
+    }
+
+    async setEnabled(value) {
+      const wanted = Boolean(value);
+      const request = ++this._request;
+      if (!wanted) {
+        this.enabled = false;
+        this.needsGesture = false;
+        this._reset();
+        await this._suspend();
+        return false;
+      }
+      this.enabled = true;
+      this._reset();
+      const running = await this._resume();
+      if (request !== this._request) return this.enabled;
+      // While intentionally paused, remember the user's choice without claiming playback.
+      if (!running && (!this.paused || !this.context || this.context.state === 'closed')) {
+        this.enabled = false;
+        this.needsGesture = false;
+        this._reset();
+        await this._suspend();
+      }
+      return this.enabled;
+    }
+
+    setScene(scene) {
+      const next = scene === 'game' ? 'game' : 'title';
+      if (next === this.scene) return;
+      this.scene = next;
+      this._reset();
+    }
+
+    setPaused(value) {
+      const paused = Boolean(value);
+      if (paused === this.paused) return;
+      this.paused = paused;
+      this.needsGesture = false;
+      this._reset();
+      if (!this.context || !this.enabled) return;
+      if (paused) {
+        this._suspend();
+      } else {
+        this._resume();
+      }
+    }
+
+    _reset() {
+      for (const voice of this._voices) this._disposeVoice(voice, true);
+      this._voices.clear();
+      this._song = null;
+      this._index = 0;
+      this._loopStart = null;
+    }
+
+    _disposeVoice(voice, stop) {
+      if (voice.disposed) return;
+      voice.disposed = true;
+      for (const source of voice.sources) {
+        source.onended = null;
+        if (stop) {
+          try { source.stop(); } catch (_) { /* source may have already ended */ }
+        }
+      }
+      for (const node of voice.nodes) {
+        try { node.disconnect(); } catch (_) { /* already disconnected */ }
+      }
+      this._voices.delete(voice);
+    }
+
+    _voice(sources, nodes, start, stop) {
+      if (this._voices.size >= MAX_VOICES) {
+        this._disposeVoice(this._voices.values().next().value, true);
+      }
+      const voice = { sources, nodes, disposed: false };
+      this._voices.add(voice);
+      sources[sources.length - 1].onended = () => this._disposeVoice(voice, false);
+      for (const source of sources) {
+        source.start(start);
+        source.stop(stop);
+      }
+    }
+
+    _getSong() {
+      const songs = global.DiscoMusic && global.DiscoMusic.songs;
+      if (!Array.isArray(songs)) return null;
+      const filename = this.scene === 'game' ? 'title2.mid' : 'title.mid';
+      return songs.find(song => song.file === filename) || songs[0] || null;
+    }
+
+    tick() {
+      if (!this.enabled || this.paused || !this.context || this.context.state !== 'running') return;
+      const song = this._getSong();
+      if (!song || !Array.isArray(song.notes) || !song.notes.length || !(song.duration > 0)) return;
+      const now = this.context.currentTime;
+      if (this._song !== song || this._loopStart === null) {
+        this._song = song;
+        this._index = 0;
+        this._loopStart = now + 0.035;
+      }
+      // Recover from a throttled/background frame without playing stale notes.
+      if (now > this._loopStart + song.duration + LOOKAHEAD) {
+        this._index = 0;
+        this._loopStart = now + 0.035;
+      }
+      let budget = 512;
+      while (budget-- > 0) {
+        if (this._index >= song.notes.length) {
+          this._index = 0;
+          this._loopStart += song.duration;
+        }
+        const note = song.notes[this._index];
+        const at = this._loopStart + note[0];
+        if (at > now + LOOKAHEAD) break;
+        this._index++;
+        if (at < now - 0.03) continue;
+        const start = Math.max(now + 0.002, at);
+        let program = 0;
+        for (const change of song.programs || []) {
+          if (change.channel === note[4] && change.time <= note[0]) program = change.program;
+        }
+        if (note[4] === 9) this._drum(start, note[2], note[3]);
+        else this._tone(start, note[1], note[2], note[3], program);
+      }
+    }
+
+    _tone(start, duration, pitch, velocity, program) {
+      const ctx = this.context;
+      const frequency = 440 * Math.pow(2, (clamp(pitch, 0, 127) - 69) / 12);
+      const length = clamp(duration, 0.025, 6);
+      const bass = program >= 32 && program <= 39;
+      const strings = program >= 40 && program <= 51;
+      const guitar = program >= 24 && program <= 31;
+      const attack = strings ? Math.min(0.025, length * 0.3) : 0.004;
+      const release = strings ? 0.065 : bass ? 0.035 : 0.045;
+      const peak = (bass ? 0.25 : strings ? 0.07 : guitar ? 0.12 : 0.14) * Math.pow(clamp(velocity, 1, 127) / 127, 1.25);
+      const sustain = peak * (strings ? 0.7 : bass ? 0.5 : 0.3);
+      const end = start + length;
+      const oscillator = ctx.createOscillator();
+      oscillator.type = strings ? 'sawtooth' : 'triangle';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(bass ? 1100 : strings ? 5000 : guitar ? 2400 : 5500, start);
+      filter.Q.value = 0.3;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(SILENCE, start);
+      gain.gain.linearRampToValueAtTime(peak, start + attack);
+      gain.gain.exponentialRampToValueAtTime(Math.max(SILENCE, sustain), Math.min(end, start + attack + 0.13));
+      gain.gain.setValueAtTime(Math.max(SILENCE, sustain), end);
+      gain.gain.exponentialRampToValueAtTime(SILENCE, end + release);
+      oscillator.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      this._voice([oscillator], [oscillator, filter, gain], start, end + release + 0.008);
+    }
+
+    _drum(start, pitch, velocity) {
+      const ctx = this.context;
+      const strength = clamp(velocity, 1, 127) / 127;
+      if (pitch === 35 || pitch === 36) {
+        const oscillator = ctx.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(115, start);
+        oscillator.frequency.exponentialRampToValueAtTime(42, start + 0.12);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.5 * strength, start);
+        gain.gain.exponentialRampToValueAtTime(SILENCE, start + 0.17);
+        oscillator.connect(gain);
+        gain.connect(this.master);
+        this._voice([oscillator], [oscillator, gain], start, start + 0.18);
+        return;
+      }
+      const hat = pitch === 42 || pitch === 44 || pitch === 46;
+      const openHat = pitch === 46;
+      const rim = pitch === 37;
+      const length = hat ? (openHat ? 0.14 : 0.055) : rim ? 0.045 : 0.12;
+      const source = ctx.createBufferSource();
+      source.buffer = this._noise;
+      const filter = ctx.createBiquadFilter();
+      filter.type = hat ? 'highpass' : 'bandpass';
+      filter.frequency.value = hat ? 6500 : rim ? 2200 : 1400;
+      filter.Q.value = hat ? 0.65 : rim ? 2 : 0.8;
+      const gain = ctx.createGain();
+      const peak = (hat ? 0.13 : rim ? 0.18 : 0.24) * strength;
+      gain.gain.setValueAtTime(peak, start);
+      gain.gain.exponentialRampToValueAtTime(SILENCE, start + length);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      this._voice([source], [source, filter, gain], start, start + length + 0.008);
+    }
+
+    beep(kind) {
+      if (!this.enabled || this.paused || !this.context || this.context.state !== 'running') return;
+      const now = this.context.currentTime + 0.005;
+      this._tone(now, 0.055, kind === 'error' ? 48 : 79, 50, 2);
+    }
+  }
+
+  global.DiscoAudio = DiscoAudio;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function (root) {
+  'use strict';
+  const KEY = 'disco-club-v2';
+  const LEGACY_KEY = 'disco-faithful-v1';
+  const empty = () => ({ version: 2, currentMode: 'free', sessions: { free: null, challenge: null }, unlocked: 1, scores: [0, 0, 0] });
+  class ClubSaveStore {
+    constructor(storage, Engine) {
+      this.storage = storage;
+      this.Engine = Engine;
+      this.data = empty();
+      this.available = true;
+      this.migrated = false;
+      this.load();
+    }
+    validate(snapshot, mode) {
+      if (!snapshot || !['free', 'challenge'].includes(mode)) return null;
+      const candidate = new this.Engine.Game();
+      return candidate.restore(snapshot) && candidate.state.mode === mode ? candidate.snapshot() : null;
+    }
+    load() {
+      let source;
+      try { source = this.storage?.getItem(KEY); }
+      catch (_) { this.available = false; return; }
+      if (!this.storage) { this.available = false; return; }
+      if (source) {
+        try {
+          const parsed = JSON.parse(source);
+          if (parsed.version === 2) {
+            for (const mode of ['free', 'challenge']) {
+              const snapshot = this.validate(parsed.sessions?.[mode]?.snapshot, mode);
+              if (snapshot) this.data.sessions[mode] = { snapshot, savedAt: Number(parsed.sessions[mode].savedAt) || 0 };
+            }
+            this.data.currentMode = parsed.currentMode === 'challenge' ? 'challenge' : 'free';
+            this.readProgress(parsed);
+            return;
+          }
+        } catch (_) { /* A broken new save must not prevent playing or legacy recovery. */ }
+      }
+      try {
+        const old = JSON.parse(this.storage.getItem(LEGACY_KEY) || 'null');
+        if (old?.version === 1) {
+          this.readProgress(old);
+          const snapshot = this.validate(old.game, 'challenge');
+          if (snapshot) {
+            this.data.sessions.challenge = { snapshot, savedAt: Date.now() };
+            this.data.currentMode = 'challenge';
+            this.migrated = true;
+          }
+        }
+      } catch (_) { /* Storage or damaged legacy data is not fatal. */ }
+    }
+    readProgress(value) {
+      this.data.unlocked = Math.max(1, Math.min(3, Math.floor(Number(value.unlocked)) || 1));
+      this.data.scores = [0, 1, 2].map(i => Math.max(0, Number(value.scores?.[i]) || 0));
+    }
+    get(mode) { return this.data.sessions[mode]?.snapshot || null; }
+    record(mode, game, { unlocked = this.data.unlocked, scores = this.data.scores } = {}) {
+      if (!['free', 'challenge'].includes(mode) || game.state.mode !== mode) return false;
+      this.data.sessions[mode] = { snapshot: game.snapshot(), savedAt: Date.now() };
+      this.data.currentMode = mode;
+      this.readProgress({ unlocked, scores });
+      try {
+        if (!this.storage) throw new Error('Storage unavailable');
+        this.storage.setItem(KEY, JSON.stringify(this.data));
+        this.available = true;
+        return true;
+      } catch (_) { this.available = false; return false; }
+    }
+  }
+  ClubSaveStore.KEY = KEY;
+  root.DiscoClubSaveStore = ClubSaveStore;
+  if (typeof module !== 'undefined' && module.exports) module.exports = ClubSaveStore;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+/* Original vector art for the upgraded DISCO preview. No external assets. */
+(function (root) {
+  'use strict';
+  const TAU = Math.PI * 2;
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  const PALETTES = [
+    ['#e68c9a', '#402d4b', '#edbb9b', '#2b2440'],
+    ['#70c6c7', '#223d51', '#bd8465', '#261d2b'],
+    ['#c6a0e6', '#433152', '#f0c8ad', '#755045'],
+    ['#e3b866', '#3e3a59', '#8f5e49', '#272139'],
+    ['#8fabe1', '#2e3856', '#e8af8e', '#b87d48'],
+    ['#acbf82', '#414649', '#c98e6e', '#40303a'],
+    ['#dc8874', '#3b2d49', '#f2ccaf', '#3b2834'],
+    ['#a090d4', '#293e51', '#9b694f', '#211d2c']
+  ];
+  // Keep feet in the open dance floor; furniture occupies the back perimeter.
+  const POSITIONS = [
+    [3.1, 4.2], [4.75, 3.9], [4.3, 5.7], [2.5, 5.8],
+    [5.7, 5.1], [3.85, 3.05], [1.6, 4.65], [5.7, 3.05],
+    [3.25, 6.65], [6.4, 6.15], [5.1, 6.85], [2.05, 3.25],
+    [6.8, 4.25], [1.35, 6.1], [4.1, 4.65], [5.2, 4.5],
+    [3.25, 5.5], [6.25, 3.6], [2.2, 6.75], [6.8, 5.3],
+    [4.2, 6.6], [2.35, 4.8], [5.8, 6.7], [3.15, 3.35]
+  ];
+
+  class DiscoClubRenderer {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d', { alpha: false });
+      this.cache = document.createElement('canvas');
+      this.cacheKey = '';
+      this.width = 0;
+      this.height = 0;
+      this.dpr = 1;
+      this.scale = 1;
+      this.tx = 0;
+      this.ty = 0;
+      this.hotspots = [];
+      this.lastTime = 0;
+      this.resize();
+    }
+
+    async load() { this.resize(); }
+
+    resize() {
+      const r = this.canvas.getBoundingClientRect();
+      const width = Math.max(1, Math.round(r.width || this.canvas.clientWidth || 390));
+      const height = Math.max(1, Math.round(r.height || this.canvas.clientHeight || 420));
+      const dpr = Math.min(2, Math.max(1, root.devicePixelRatio || 1));
+      if (width === this.width && height === this.height && this.dpr === dpr) return;
+      this.width = width;
+      this.height = height;
+      this.dpr = dpr;
+      this.canvas.width = Math.round(width * dpr);
+      this.canvas.height = Math.round(height * dpr);
+      this.cache.width = this.canvas.width;
+      this.cache.height = this.canvas.height;
+      this.wide = width / height > 1.22;
+      this.depth = this.wide ? 29.5 : 38;
+      this.originY = this.wide ? 260 : 310;
+      this.wallHeight = this.wide ? 190 : 220;
+      const logicalHeight = this.wide ? 735 : 900;
+      this.scale = Math.min(width / 900, height / logicalHeight);
+      this.tx = width / 2 - 500 * this.scale;
+      this.ty = height / 2 - (this.wide ? 385 : 470) * this.scale;
+      this.cacheKey = '';
+      this.canvas.dataset.renderScale = String(Math.round(this.scale * dpr * 100) / 100);
+    }
+
+    iso(u, v, z = 0) { return [500 + (u - v) * 58, this.originY + (u + v) * this.depth - z]; }
+
+    world(c) {
+      c.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, this.tx * this.dpr, this.ty * this.dpr);
+    }
+
+    polygon(c, points, fill, stroke, width = 1) {
+      c.beginPath();
+      points.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+      c.closePath();
+      if (fill) { c.fillStyle = fill; c.fill(); }
+      if (stroke) { c.strokeStyle = stroke; c.lineWidth = width; c.stroke(); }
+    }
+
+    line(c, points, color, width = 2) {
+      c.beginPath();
+      points.forEach((p, i) => i ? c.lineTo(p[0], p[1]) : c.moveTo(p[0], p[1]));
+      c.strokeStyle = color; c.lineWidth = width; c.lineCap = 'round'; c.lineJoin = 'round'; c.stroke();
+    }
+
+    ellipse(c, x, y, rx, ry, fill, stroke, width = 1) {
+      c.beginPath(); c.ellipse(x, y, rx, ry, 0, 0, TAU);
+      if (fill) { c.fillStyle = fill; c.fill(); }
+      if (stroke) { c.strokeStyle = stroke; c.lineWidth = width; c.stroke(); }
+    }
+
+    rounded(c, x, y, w, h, r, fill, stroke) {
+      r = Math.min(r, w / 2, h / 2);
+      c.beginPath(); c.moveTo(x + r, y); c.lineTo(x + w - r, y);
+      c.quadraticCurveTo(x + w, y, x + w, y + r); c.lineTo(x + w, y + h - r);
+      c.quadraticCurveTo(x + w, y + h, x + w - r, y + h); c.lineTo(x + r, y + h);
+      c.quadraticCurveTo(x, y + h, x, y + h - r); c.lineTo(x, y + r);
+      c.quadraticCurveTo(x, y, x + r, y); c.closePath();
+      if (fill) { c.fillStyle = fill; c.fill(); }
+      if (stroke) { c.strokeStyle = stroke; c.lineWidth = 1.5; c.stroke(); }
+    }
+
+    prism(c, u, v, w, d, h, top, front, side, z = 0) {
+      const base = [[u,v],[u+w,v],[u+w,v+d],[u,v+d]].map(p => this.iso(...p,z));
+      const raised = base.map(([x,y]) => [x,y-h]);
+      this.polygon(c,[base[3],base[2],raised[2],raised[3]],front);
+      this.polygon(c,[base[1],base[2],raised[2],raised[1]],side);
+      this.polygon(c,raised,top);
+      this.line(c,[raised[3],raised[2],raised[1]],'rgba(244,228,255,.13)',1.4);
+      return {base, raised};
+    }
+
+    floorTile(c, u, v, size, fill, stroke) {
+      this.polygon(c,[[u,v],[u+size,v],[u+size,v+size],[u,v+size]].map(p=>this.iso(...p)),fill,stroke,.8);
+    }
+
+    wallLamp(c, u, v, wall) {
+      const [x,y] = this.iso(u,v,this.wallHeight - 26);
+      const sign=wall==='left'?-1:1;
+      this.line(c,[[x,y-10],[x+sign*13,y-3],[x+sign*13,y+10]],'#454761',4);
+      this.polygon(c,[[x+sign*3,y+6],[x+sign*25,y+6],[x+sign*31,y+23],[x-sign*2,y+23]],'#23263d');
+      this.ellipse(c,x+sign*14,y+23,15,6,'#bba1f1');
+      return [x+sign*14,y+23];
+    }
+
+    plant(c,u,v,large=false) {
+      const [x,y] = this.iso(u,v);
+      const h=large?66:44;
+      this.ellipse(c,x,y+2,21,9,'rgba(5,9,18,.25)');
+      this.polygon(c,[[x-16,y-h*.3],[x+16,y-h*.3],[x+11,y+3],[x-10,y+3]],'#65516c');
+      this.ellipse(c,x,y-h*.3,16,6,'#8d7190');
+      this.ellipse(c,x,y-h*.3,13,4,'#343447');
+      for(let i=0;i<7;i++) {
+        const a=(i-3)*.42, ex=x+Math.sin(a)*h*.55, ey=y-h*.4-Math.cos(a)*h*.75;
+        c.beginPath(); c.moveTo(x,y-h*.28); c.quadraticCurveTo(x-10,ey,ex,ey);
+        c.quadraticCurveTo(ex+10,ey+15,x,y-h*.28); c.fillStyle=i%2?'#447769':'#62947a';c.fill();
+        this.line(c,[[x,y-h*.3],[ex,ey+3]],'#75a58a',1.1);
+      }
+    }
+
+    speaker(c,u,v,tier) {
+      const h=52+Math.min(5,tier)*7;
+      const box=this.prism(c,u,v,.57,.53,h,'#3c415a','#252c43','#1b2135');
+      const [x,y]=this.iso(u+.28,v+.54);
+      this.line(c,[[box.raised[3][0]+3,box.raised[3][1]+4],[box.base[3][0]+3,box.base[3][1]-3]],'#59617c',1.5);
+      for(const [dy,r] of [[-h+15,6],[-h*.43,12+tier*.6]]) {
+        this.ellipse(c,x,y+dy,r,r*1.02,'#11192a','#454d68',2);
+        this.ellipse(c,x,y+dy,r*.7,r*.72,'#28344d','#39445e',1);
+        this.ellipse(c,x,y+dy,r*.25,r*.26,'#52617d');
+      }
+      this.rounded(c,x-3,y-5,6,2,1,tier?'#86d3c3':'#7d8b9e');
+      this.hotspots.push({kind:'speakers',x,y:y-h*.5,rx:38,ry:h*.65});
+    }
+
+    booth(c,e) {
+      this.prism(c,.15,.17,3.15,2.4,13,'#3d405b','#30324d','#262c43');
+      const decks=e.decks||0;
+      const w=2.05+(decks>1?.18:0);
+      const table=this.prism(c,.61,1.03,w,.82,48,'#4d4a63','#5f447c','#403252',13);
+      const [lx,ly]=this.iso(.72,1.78,38);
+      const [rx,ry]=this.iso(.72+w-.22,1.78,38);
+      this.line(c,[[lx,ly],[rx,ry]],decks>1?'#78ded1':'#b899dc',3.5);
+      this.line(c,[[lx,ly+5],[rx,ry+5]],'#40304f',2);
+      for(const u of [.99,1.92]) {
+        const [x,y]=this.iso(u,1.42,63);
+        this.ellipse(c,x,y,19,10,'#1c2237','#64637e',1.5);
+        this.ellipse(c,x,y,13,6.8,'#333e56');
+        this.ellipse(c,x,y,5,2.6,decks?'#8bd3d0':'#c6b4d3');
+        this.line(c,[[x+10,y-7],[x+15,y-4],[x+6,y+3]],'#a3adbf',1.8);
+      }
+      const [mx,my]=this.iso(1.45,1.38,63);
+      this.polygon(c,[[mx-9,my-8],[mx+12,my+2],[mx+4,my+13],[mx-17,my+3]],'#222b40');
+      for(let i=0;i<3;i++)this.line(c,[[mx-9+i*5,my-1+i*2],[mx-5+i*5,my+3+i*2]],i===1?'#7ed8cc':'#c3b4d8',1.5);
+      if(decks>0) {
+        const [x,y]=this.iso(1.57,.91,69);
+        this.polygon(c,[[x-22,y-22],[x+11,y-7],[x+7,y+15],[x-25,y]],'#151f33','#66758b');
+        this.polygon(c,[[x-19,y-18],[x+7,y-6],[x+4,y+10],[x-21,y-1]],'#39596b');
+        this.line(c,[[x-16,y-10],[x-11,y-11],[x-7,y-3],[x-2,y-5],[x+2,y]],'#8ee6d8',1.8);
+      }
+      const at=table.raised[2];
+      this.hotspots.push({kind:'decks',x:at[0],y:at[1]-8,rx:100,ry:64});
+      this.speaker(c,.06,2.06,e.speakers||0);
+      this.speaker(c,3.02,.15,e.speakers||0);
+    }
+
+    bar(c) {
+      this.prism(c,4.35,.18,2.72,.82,60,'#9c7d8f','#564969','#3d3854');
+      const a=this.iso(4.5,.94,35), b=this.iso(6.95,.94,35);
+      this.line(c,[a,b],'#b6a0aa',2);
+      for(let k=0;k<8;k++) {
+        const [x,y]=this.iso(4.6+k*.29,.56,61);
+        const col=['#79aba1','#d29cb4','#b7a3d7','#d8bd83'][k%4];
+        this.rounded(c,x-3,y-18-(k%3)*3,6,18+(k%3)*3,2,col);
+        this.rounded(c,x-1.4,y-23-(k%3)*3,2.8,8,1,'#b8b6c7');
+        this.line(c,[[x-1,y-12],[x-1,y-3]],'rgba(255,255,255,.25)',1);
+      }
+      const [trayX,trayY]=this.iso(6.9,.81,62);
+      this.ellipse(c,trayX,trayY,15,7,'#384159','#baa3b7',1.5);
+      for(let k=0;k<2;k++){this.ellipse(c,trayX-6+k*10,trayY-5,4,3,'#c7d3dc');this.line(c,[[trayX-6+k*10,trayY-5],[trayX-6+k*10,trayY-15]],'#9db6c7',2);}
+      for(const u of [4.8,5.7,6.6]) {
+        const [x,y]=this.iso(u,1.58);
+        this.ellipse(c,x,y,19,9,'rgba(11,16,30,.35)');
+        this.ellipse(c,x,y-2,13,5,'#394257');
+        this.line(c,[[x,y-3],[x,y-29]],'#8e8c9f',5);
+        this.ellipse(c,x,y-13,12,5,null,'#777c91',2);
+        this.ellipse(c,x,y-31,19,10,'#a35f86');
+        this.ellipse(c,x,y-34,19,9,'#c68aa7');
+        this.line(c,[[x-11,y-36],[x+3,y-39]],'#dca2bc',1.5);
+      }
+    }
+
+    lounge(c) {
+      // Small left-wall banquette, kept outside the guest positions.
+      this.prism(c,.18,4.1,.65,2.15,23,'#806b94','#59496f','#443e5a');
+      this.prism(c,.05,4.05,.19,2.25,57,'#79628c','#5d4c70','#4d415c');
+      for(let k=0;k<3;k++) {
+        const u=.25,v=4.15+k*.69;
+        this.prism(c,u,v,.54,.63,25,k%2?'#9c819d':'#8b7396','#67516f','#594566');
+      }
+      const [x,y]=this.iso(1.18,5.25);
+      this.line(c,[[x,y],[x,y-30]],'#766d88',5);
+      this.ellipse(c,x,y-31,28,15,'#6f667b','#9b879d',2);
+      this.ellipse(c,x-6,y-34,5,3,'#e2c6a2');
+      this.line(c,[[x-6,y-34],[x-6,y-43]],'#c6a1b1',3);
+      this.plant(c,.45,6.85,true);
+      this.plant(c,7,.35,true);
+    }
+
+    buildStatic(e,key) {
+      const c=this.cache.getContext('2d',{alpha:false});
+      c.setTransform(1,0,0,1,0,0);
+      const bg=c.createLinearGradient(0,0,this.cache.width,this.cache.height);
+      bg.addColorStop(0,'#151726');bg.addColorStop(.55,'#1a1a2c');bg.addColorStop(1,'#111522');
+      c.fillStyle=bg;c.fillRect(0,0,this.cache.width,this.cache.height);
+      this.world(c);
+      this.hotspots=[];
+      const corners=[[0,0],[7.5,0],[7.5,7.5],[0,7.5]].map(p=>this.iso(...p));
+      const [a,b,f,d]=corners, h=this.wallHeight;
+      // The raised plinth gives the room a coherent miniature-set silhouette.
+      this.ellipse(c,500,f[1]-36,417,82,'rgba(3,7,16,.27)');
+      this.polygon(c,[[d[0],d[1]+22],[f[0],f[1]+34],[b[0],b[1]+22],b,a,d],'#101725');
+      this.polygon(c,[a,d,[d[0],d[1]-h],[a[0],a[1]-h]],'#34304b');
+      this.polygon(c,[a,b,[b[0],b[1]-h],[a[0],a[1]-h]],'#252c43');
+      for(let i=1;i<8;i++) {
+        let p=this.iso(0,i); this.line(c,[p,[p[0],p[1]-h]],'#41394f',1.5);
+        p=this.iso(i,0); this.line(c,[p,[p[0],p[1]-h]],'#323a50',1.5);
+      }
+      // Two-layer crown lighting is cached, including its soft halo.
+      const strip=[[d[0],d[1]-h+10],[a[0],a[1]-h+10],[b[0],b[1]-h+10]];
+      c.save();c.shadowColor='#8d7bcb';c.shadowBlur=14;
+      this.line(c,strip,e.lights>2?'#bca6ee':'#8e7cb9',4);c.restore();
+      this.line(c,strip.map(([x,y])=>[x,y+7]),'#504461',3);
+      this.line(c,[[a[0],a[1]-h],[a[0],a[1]]],'#464057',3);
+      // Left wall inset arches, with a satin rather than shiny surface.
+      for(const v of [3.05,5.65]) {
+        const [x,y]=this.iso(0,v,h*.62);
+        const poly=[[x-37,y-24],[x+30,y-57],[x+30,y+27],[x-37,y+61]];
+        this.polygon(c,poly,'#242c43','#766586',2);
+        this.line(c,[[x-27,y+41],[x-27,y-10],[x+19,y-33]],'#9b78b5',2);
+        this.line(c,[[x-24,y+44],[x+18,y+23]],'#687d9f',2);
+      }
+      const sign=this.iso(2.9,0,h*.61);
+      c.save();c.translate(sign[0],sign[1]);c.transform(1,.42,0,1,0,0);
+      this.rounded(c,-5,-61,185,75,13,'#20283a','#475167');
+      c.font='800 39px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';c.textBaseline='middle';
+      c.fillStyle='#cae8df';c.fillText('DISCO',10,-27);
+      this.line(c,[[13,-2],[162,-2]],'#6aabae',2);c.restore();
+      const shelves=[this.iso(5.1,0,h*.59),this.iso(6.15,0,h*.59)];
+      for(const [sx,sy] of shelves){this.line(c,[[sx-19,sy],[sx+27,sy+20]],'#79758c',4);this.rounded(c,sx-2,sy-24,8,25,2,'#8bafaa');this.rounded(c,sx+15,sy-12,8,24,2,'#bb8ea5');}
+      const floorColors=e.floor>=3?['#476b81','#628c97','#727c9b','#6c658d']:
+        e.floor>=2?['#42627c','#586e96','#665f8c','#537f8d']:
+          e.floor>=1?['#354e6a','#4b6683','#51567a','#416d79']:['#35445d','#42445e','#3f4965','#33475e'];
+      for(let u=0;u<7.5;u+=.75)for(let v=0;v<7.5;v+=.75) {
+        const dance=u>=1.5&&u<6.75&&v>=2.25&&v<6.75;
+        const idx=(Math.round(u/.75)+Math.round(v/.75)*2)%4;
+        this.floorTile(c,u,v,.75,dance?floorColors[idx]:((Math.round((u+v)/.75)%2)?'#30364b':'#343b50'),'rgba(13,24,40,.32)');
+      }
+      const edging=[[1.5,2.25],[6.75,2.25],[6.75,6.75],[1.5,6.75]].map(p=>this.iso(...p));
+      this.polygon(c,edging,null,e.floor?'#9db7c0':'#65788e',2);
+      this.polygon(c,[d,f,[f[0],f[1]+15],[d[0],d[1]+15]],'#393a54');
+      this.polygon(c,[b,f,[f[0],f[1]+15],[b[0],b[1]+15]],'#282f45');
+      this.line(c,[d,f,b],'#7b819e',2);
+      this.line(c,[[d[0],d[1]+17],[f[0],f[1]+28],[b[0],b[1]+17]],'#222a3f',4);
+      this.lounge(c);
+      this.booth(c,e);
+      this.bar(c);
+      this.lamps=[this.wallLamp(c,0,2,'left'),this.wallLamp(c,6.7,0,'right')];
+      const lampP=this.lamps[0];this.hotspots.push({kind:'lights',x:lampP[0],y:lampP[1],rx:55,ry:48});
+      const floorCenter=this.iso(4.2,4.5);this.hotspots.push({kind:'floor',x:floorCenter[0],y:floorCenter[1],rx:205,ry:130});
+      if(e.dancer) {
+        this.prism(c,2.95,1.42,.72,.72,24,'#8b759d','#674f81','#4b405f');
+        const p=this.iso(3.3,1.8);this.hotspots.unshift({kind:'dancer',x:p[0],y:p[1]-35,rx:43,ry:62});
+      }
+      const ball=this.iso(2.15,2.15,h+80);
+      this.line(c,[[ball[0],ball[1]-64],[ball[0],ball[1]-20]],'#727b99',2);
+      if(!e.ball)this.ellipse(c,ball[0],ball[1]-13,9,9,'#98a5bc','#c2cddd',2);
+      this.ballPosition=ball;
+      this.hotspots.unshift({kind:'ball',x:ball[0],y:ball[1],rx:45,ry:50});
+      this.cacheKey=key;
+    }
+
+    limbs(c,points,color,width) { this.line(c,points,'#192335',width+2);this.line(c,points,color,width); }
+
+    person(c,u,v,index,time,energy=1,role='guest') {
+      const [x,ground]=this.iso(u,v,role==='dj'?13:role==='dancer'?24:0);
+      const p=PALETTES[index%PALETTES.length],phase=index*1.71;
+      const beat=time*(role==='dj'?2.8:3.2)+phase;
+      const bounce=(1+Math.sin(beat))*1.9*energy;
+      const sway=Math.sin(beat*.5)*3.5*energy;
+      const y=ground-bounce;
+      const skin=p[2],hair=p[3],top=role==='dj'?'#dbc29a':p[0],pants=p[1];
+      const female=index%3===0, jacket=index%4===1;
+      this.ellipse(c,x,ground+1,19,7,'rgba(7,18,31,.3)');
+      c.save();c.translate(x,y);
+      const step=Math.sin(beat)*4.8*energy;
+      this.limbs(c,[[-5,-24],[-7-step*.4,-13],[-10-step,0]],pants,7);
+      this.limbs(c,[[5,-24],[8+step*.4,-13],[11+step,0]],pants,7);
+      this.rounded(c,-15-step,-2,12,6,2.5,'#d0cfda');
+      this.rounded(c,7+step,-2,12,6,2.5,'#e4d7db');
+      if(female) this.polygon(c,[[-10+sway,-32],[10+sway,-32],[14,-19],[-13,-19]],top);
+      // The silhouette uses a shaped torso and bent arms, not line-only bodies.
+      c.beginPath();c.moveTo(-12+sway,-48);c.quadraticCurveTo(sway,-53,12+sway,-48);
+      c.lineTo(10,-26);c.quadraticCurveTo(0,-22,-10,-26);c.closePath();c.fillStyle=top;c.fill();
+      this.line(c,[[-10+sway,-45],[-8,-29]],'rgba(255,255,255,.18)',2);
+      if(jacket){this.polygon(c,[[-11+sway,-48],[-3+sway,-48],[-2,-26],[-10,-27]],'#4b6775');this.polygon(c,[[5+sway,-48],[12+sway,-46],[10,-27],[5,-26]],'#435c69');}
+      if(role==='dj') {
+        this.limbs(c,[[-11+sway,-45],[-18,-36],[-24,-38]],skin,5.5);
+        this.limbs(c,[[11+sway,-45],[21,-34],[26,-37]],skin,5.5);
+      } else {
+        const lift=Math.sin(beat*.5+index)*10*energy;
+        const armUp=index%2===0;
+        this.limbs(c,[[-11+sway,-45],[-22+sway,-40-(armUp?12:0)-lift*.4],[-24+sway,-35-(armUp?27:0)-lift]],skin,5.3);
+        this.limbs(c,[[11+sway,-45],[22+sway,-48+(armUp?7:-5)+lift*.35],[25+sway,-54+(armUp?12:-9)+lift]],skin,5.3);
+      }
+      this.rounded(c,-3+sway,-55,7,9,2,skin);
+      if(female){this.ellipse(c,sway,-62,13,15,hair);this.ellipse(c,sway-9,-52,6,12,hair);}
+      this.ellipse(c,sway,-64,10.5,12,skin);
+      c.beginPath();c.moveTo(sway-11,-64);c.bezierCurveTo(sway-15,-83,sway+13,-82,sway+12,-64);
+      c.quadraticCurveTo(sway+5,-75,sway-2,-69);c.quadraticCurveTo(sway-8,-66,sway-11,-64);c.fillStyle=hair;c.fill();
+      if(index%5===3)this.ellipse(c,sway+7,-79,6,6,hair);
+      this.ellipse(c,sway-3.7,-63,1.1,1.3,'#352d3c');this.ellipse(c,sway+4.1,-63,1.1,1.3,'#352d3c');
+      this.line(c,[[sway-1,-56.5],[sway+3,-56.5]],'#9b6265',1.3);
+      this.line(c,[[sway+.5,-62],[sway+1.5,-59]],'rgba(140,84,67,.5)',1);
+      if(role==='dj') {
+        c.beginPath();c.arc(sway,-65,13.7,Math.PI,TAU);c.strokeStyle='#242c43';c.lineWidth=3.7;c.stroke();
+        this.rounded(c,sway-15,-66,5,11,2,'#7b8caa');this.rounded(c,sway+10,-66,5,11,2,'#7b8caa');
+      }
+      c.restore();
+    }
+
+    rays(c,e,time,happy) {
+      if(!e.lights)return;
+      c.save();
+      const floor=[[0,0],[7.5,0],[7.5,7.5],[0,7.5]].map(p=>this.iso(...p));
+      c.beginPath();floor.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();
+      // Ground pools stay inside the dance floor; no full-scene blur per frame.
+      c.save();c.clip();
+      const count=e.lights>2?4:2;
+      for(let i=0;i<count;i++) {
+        const [x,y]=this.iso(3.7+Math.sin(time*.35+i*2)*1.5,4.5+Math.cos(time*.29+i*1.5)*1.5);
+        const glow=c.createRadialGradient(x,y,4,x,y,130);
+        glow.addColorStop(0,i%2?'rgba(172,122,219,.17)':'rgba(92,195,190,.16)');glow.addColorStop(1,'rgba(70,150,175,0)');
+        c.fillStyle=glow;c.fillRect(x-130,y-130,260,260);
+      }
+      c.restore();
+      for(let i=0;i<this.lamps.length;i++) {
+        const [x,y]=this.lamps[i];const target=this.iso(3.3+Math.sin(time*.35+i*2)*1.2,4.5+Math.cos(time*.3+i*2)*1.5);
+        const gradient=c.createLinearGradient(x,y,target[0],target[1]);
+        gradient.addColorStop(0,i?'rgba(105,220,214,.15)':'rgba(197,143,232,.17)');
+        gradient.addColorStop(1,'rgba(132,164,215,0)');
+        this.polygon(c,[[x-5,y],[x+5,y],[target[0]+69,target[1]],[target[0]-69,target[1]]],gradient);
+      }
+      if(happy) {
+        for(let i=0;i<15;i++) {
+          const x=180+(i*97)%650,y=this.originY+120+(i*71)%330;
+          const alpha=.22+.15*Math.sin(time*3+i);
+          this.ellipse(c,x,y+Math.sin(time+i)*5,1.5,1.5,`rgba(242,211,168,${alpha})`);
+        }
+      }
+      c.restore();
+    }
+
+    discoBall(c,e,time) {
+      if(!e.ball)return;
+      const [x,y]=this.ballPosition, r=23;
+      const glow=c.createRadialGradient(x-8,y-9,2,x,y,r);
+      glow.addColorStop(0,'#e9e6f1');glow.addColorStop(.4,'#b6bddb');glow.addColorStop(1,'#68779d');
+      this.ellipse(c,x,y,r,r,glow,'#b3bdd2',1);
+      c.save();c.beginPath();c.arc(x,y,r-1,0,TAU);c.clip();
+      for(let row=-3;row<=3;row++)for(let col=-3;col<=3;col++) {
+        const shift=Math.sin(time*.6+row*.3)*4;
+        const xx=x+col*7+shift,yy=y+row*7;
+        const light=(col+row+Math.floor(time*.8))%3;
+        c.fillStyle=light===0?'rgba(240,243,255,.8)':light===1?'rgba(112,143,185,.6)':'rgba(77,98,144,.55)';
+        c.fillRect(xx-2.7,yy-2.7,5.2,5.2);
+      }
+      c.restore();this.ellipse(c,x-8,y-9,4.5,4.5,'rgba(255,255,255,.72)');
+    }
+
+    draw(state,time,options={}) {
+      this.resize();
+      const preview=!!options.preview;
+      const e=preview?{lights:2,floor:2,ball:1,speakers:2,decks:2,dancer:0}:({...state?.equipment});
+      const t=options.reducedMotion?0:options.paused?this.lastTime:Number.isFinite(time)?time:0;
+      this.lastTime=t;
+      const key=[this.width,this.height,this.dpr,...['lights','floor','ball','speakers','decks','dancer'].map(k=>e[k]||0)].join(':');
+      if(this.cacheKey!==key)this.buildStatic(e,key);
+      const c=this.ctx;c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.drawImage(this.cache,0,0);
+      this.world(c);
+      this.rays(c,e,t,!!state?.happyHour);
+      const active=preview||state?.host?.active;
+      // A house operator remains behind the desk; hiring a DJ adds energy.
+      this.person(c,1.5,.79,3,t,active?1:.18,'dj');
+      // The counter front masks the operator's feet naturally.
+      this.boothFront(c,e);
+      this.discoBall(c,e,t);
+      if(e.dancer)this.person(c,3.31,1.79,6,t,options.reducedMotion?0:1.25,'dancer');
+      const visitors=preview?12:Math.max(0,Number(state?.visitors)||0);
+      const crowd=Math.min(POSITIONS.length,Math.floor(visitors));
+      const energy=options.reducedMotion?0:state?.happyHour?1.35:active?1:.62;
+      const people=POSITIONS.slice(0,crowd).map(([u,v],i)=>({u,v,i}));
+      people.sort((a,b)=>(a.u+a.v)-(b.u+b.v));
+      people.forEach(({u,v,i})=>this.person(c,u,v,i,t,energy));
+      this.canvas.dataset.renderedCrowd=String(crowd);
+      this.canvas.dataset.renderStyle='cartoon';
+    }
+
+    boothFront(c,e) {
+      const a=this.iso(.61,1.85,13),b=this.iso(2.66+(e.decks>1?.18:0),1.85,13);
+      this.polygon(c,[a,b,[b[0],b[1]-48],[a[0],a[1]-48]],'#60467d');
+      this.line(c,[[a[0]+8,a[1]-21],[b[0]-7,b[1]-21]],e.decks>1?'#78ded1':'#b899dc',3);
+      this.line(c,[[a[0]+8,a[1]-15],[b[0]-7,b[1]-15]],'#49345c',2);
+    }
+
+    pick(clientX,clientY) {
+      const r=this.canvas.getBoundingClientRect();
+      if(clientX<r.left||clientX>r.right||clientY<r.top||clientY>r.bottom)return null;
+      const x=(clientX-r.left-this.tx)/this.scale,y=(clientY-r.top-this.ty)/this.scale;
+      for(const spot of this.hotspots)if(((x-spot.x)/spot.rx)**2+((y-spot.y)/spot.ry)**2<=1)return spot.kind;
+      return null;
+    }
+
+    destroy() { this.cache.width=1;this.cache.height=1;this.hotspots=[]; }
+  }
+  root.DiscoClubRenderer=DiscoClubRenderer;
+})(globalThis);
+
+</script>
+<script>
+(async function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const canvas = $('club-canvas');
+  const panel = $('game-panel');
+  const renderer = new DiscoClubRenderer(canvas);
+  const audio = typeof DiscoAudio === 'function' ? new DiscoAudio() : null;
+  let storage = null;
+  try { storage = window.localStorage; } catch (_) { /* Private storage may be unavailable. */ }
+  const store = new DiscoClubSaveStore(storage, DiscoEngine);
+  const game = new DiscoEngine.Game();
+  let currentMode = store.data.currentMode;
+  let hasGame = false;
+  let screen = 'welcome';
+  let paused = false;
+  let visible = !document.hidden;
+  let panelView = null;
+  let elapsed = 0, lastTime = performance.now(), lastPaint = 0, lastHud = 0, saveAge = 0;
+  let lastDay = 0, lastEvent = null, terminalShown = '';
+  let offlineReady = false;
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)');
+  const names = { lights: '灯光', floor: '舞池', ball: '迪斯科球', dancer: '驻场舞者', speakers: '音响', decks: 'DJ 台', host: '驻场 DJ', advertising: '宣传推广' };
+  const icons = { lights: '✦', floor: '▧', ball: '◉', dancer: '♬', speakers: '◖', decks: '◎', host: '♫', advertising: '↗', loan: '$', stats: '≋' };
+  const descriptions = {
+    lights: '让灯光跟着音乐流动', floor: '升级舞池，容纳更多客人', ball: '把星光洒进每一个角落',
+    dancer: '让全场更快进入状态', speakers: '给舞厅更好的声音', decks: '为更出色的 DJ 做好准备',
+    host: '邀请 DJ，让今晚热起来', advertising: '让更多人听说你的舞厅'
+  };
+  const previewState = { ...game.state, visitors: 9, happiness: 76, equipment: { lights: 2, floor: 1, ball: 1, dancer: 0, speakers: 1, decks: 1 }, host: { active: true }, happyHour: false };
+
+  function node(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    if (text !== undefined) el.textContent = text;
+    return el;
+  }
+  function put(id, value) { const el = $(id); if (el && el.textContent !== String(value)) el.textContent = value; }
+  function say(text) { put('notice', text); }
+  function format(value) { return Math.floor(value).toLocaleString('en-US'); }
+  function refreshWelcome() {
+    const mode = store.get(currentMode) ? currentMode : store.get('free') ? 'free' : 'challenge';
+    const exists = Boolean(store.get(mode));
+    $('continue-button').hidden = !exists;
+    $('continue-button').textContent = mode === 'free' ? '继续自由经营' : '继续闯关';
+    $('continue-button').dataset.mode = mode;
+  }
+  function save() {
+    if (!hasGame) return;
+    const ok = store.record(currentMode, game);
+    put('save-label', ok ? '进度已保存' : '当前浏览器无法保存');
+    saveAge = 0;
+    refreshWelcome();
+  }
+  function syncAudio() {
+    audio?.setScene(screen === 'welcome' ? 'title' : 'game');
+    audio?.setPaused(!visible || (screen === 'game' && (paused || panel.open || game.state.needsRecovery || game.state.status !== 'playing')) || (screen === 'welcome' && panel.open));
+    lastTime = performance.now();
+  }
+  function closePanel() { if (panel.open) panel.close(); panelView = null; syncAudio(); }
+  function panelAction(label, action, primary = false) {
+    const b = node('button', 'button ' + (primary ? 'primary' : 'secondary'), label);
+    b.type = 'button';
+    b.addEventListener('click', () => { audio?.resumeFromGesture?.(); action(); });
+    return b;
+  }
+  function showPanel({ title, subtitle = '', build, actions = [], back = null }) {
+    panelView = { back };
+    put('panel-title', title);
+    put('panel-subtitle', subtitle);
+    $('panel-subtitle').hidden = !subtitle;
+    $('panel-back').hidden = !back;
+    $('panel-body').className = 'panel-body';
+    $('panel-body').replaceChildren();
+    $('panel-actions').replaceChildren(...actions.map(a => panelAction(a.label, a.action, a.primary)));
+    build?.($('panel-body'));
+    $('panel-body').scrollTop = 0;
+    if (!panel.open) panel.showModal();
+    syncAudio();
+    // Focus a stable heading/close control so opening a long catalog never jumps down it.
+    $('panel-close').focus({ preventScroll: true });
+  }
+  function copy(body, paragraphs) {
+    const content = node('div', 'dialog-copy');
+    for (const paragraph of paragraphs) content.append(node('p', '', paragraph));
+    body.append(content);
+  }
+  function row(body, { title, detail = '', value = '', icon = '↗', action, disabled = false }) {
+    const button = node('button', 'menu-row');
+    button.type = 'button';
+    const mark = node('span', 'row-icon', icon); mark.setAttribute('aria-hidden', 'true');
+    const text = node('span', 'row-copy');
+    text.append(node('span', 'row-title', title));
+    if (detail) text.append(node('span', 'row-detail', detail));
+    button.append(mark, text);
+    if (value) button.append(node('span', 'row-value', value));
+    button.disabled = disabled;
+    button.setAttribute('aria-disabled', String(disabled));
+    button.addEventListener('click', () => { audio?.resumeFromGesture?.(); action?.(); });
+    body.append(button);
+  }
+  function describe(title, paragraphs, { confirm = '知道了', action = closePanel, cancel, back } = {}) {
+    showPanel({ title, build: body => copy(body, paragraphs), back,
+      actions: [...(cancel ? [{ label: '取消', action: cancel }] : []), { label: confirm, action, primary: true }] });
+  }
+  function enterGame() {
+    hasGame = true; screen = 'game'; paused = false; terminalShown = ''; lastDay = game.state.day; lastEvent = null;
+    document.body.dataset.screen = screen; $('welcome').hidden = true;
+    closePanel(); syncAudio(); updateHud(); save();
+    say(currentMode === 'free' ? '自由经营开始了。轻点设备，或打开经营菜单。' : '新的一晚开始了。先给舞厅添一点人气。');
+    if (game.state.needsRecovery) showRecovery();
+    else if (game.state.status !== 'playing') showResult();
+  }
+  function resumeMode(mode) {
+    if (hasGame) save();
+    const snapshot = store.get(mode);
+    if (snapshot && game.restore(snapshot)) { currentMode = mode; enterGame(); return true; }
+    return false;
+  }
+  function beginFree() {
+    audio?.resumeFromGesture?.();
+    if (resumeMode('free')) return;
+    if (hasGame) save();
+    currentMode = 'free'; game.startFree(); enterGame();
+  }
+  function selectChallenge() {
+    showPanel({ title: '挑战模式', subtitle: '三个目标，逐步解锁。自由经营的进度会单独保留。',
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        if (store.get('challenge')) row(body, { title: '继续上次挑战', detail: '接着之前的进度营业', value: '继续', icon: '↗', action: () => resumeMode('challenge') });
+        for (const objective of DiscoEngine.OBJECTIVES) {
+          const unlocked = objective.level <= store.data.unlocked;
+          row(body, { title: '第 ' + objective.level + ' 关 · ' + objective.title, detail: objective.description,
+            value: unlocked ? '开始' : '未解锁', icon: String(objective.level), disabled: !unlocked,
+            action: () => intro(objective.level) });
+        }
+      }, actions: [{ label: '返回', action: closePanel }] });
+  }
+  function intro(level) {
+    const obj = DiscoEngine.OBJECTIVES[level - 1];
+    describe('第 ' + level + ' 关 · ' + obj.title,
+      [obj.description, '每个营业日为 30 秒，菜单打开时计时暂停。' + (store.get('challenge') ? '开始后将替换原来的闯关进度；自由经营不受影响。' : '')],
+      { confirm: '开始挑战', action: () => { if (hasGame) save(); currentMode = 'challenge'; game.start(level); enterGame(); }, cancel: selectChallenge, back: selectChallenge });
+  }
+  function returnWelcome() {
+    save(); closePanel(); screen = 'welcome'; document.body.dataset.screen = screen; $('welcome').hidden = false;
+    refreshWelcome(); syncAudio(); say('选择你的下一场夜生活。');
+  }
+  function showMenu() {
+    save();
+    showPanel({ title: '你的舞厅', subtitle: currentMode === 'free' ? '自由经营 · 没有通关期限' : '挑战模式 · 第 ' + game.state.level + ' 关',
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        row(body, { title: '继续营业', detail: '回到舞池', action: closePanel, icon: '▷' });
+        row(body, { title: '经营状况', detail: '查看设备、现金和贷款', action: showStats, icon: '≋' });
+        row(body, { title: currentMode === 'free' ? '切换到挑战模式' : '切换到自由经营', detail: '两种模式分别保存进度', action: currentMode === 'free' ? selectChallenge : beginFree, icon: '⇄' });
+        row(body, { title: '玩法与保存说明', detail: '操作、离线与添加到主屏幕', action: showHelp, icon: '?' });
+        row(body, { title: '返回开始画面', detail: '进度已保存，随时再来', action: returnWelcome, icon: '⌂' });
+      }, actions: [{ label: '继续营业', action: closePanel, primary: true }] });
+  }
+  function showManage() {
+    if (game.state.needsRecovery) { showRecovery(); return; }
+    showPanel({ title: '经营舞厅', subtitle: '可用现金 $' + format(game.state.cash),
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        for (const key of ['lights', 'floor', 'decks', 'speakers', 'ball', 'dancer', 'host', 'advertising']) {
+          const tier = game.state.equipment[key] || 0;
+          row(body, { title: names[key], detail: descriptions[key], icon: icons[key], value: key === 'host' ? (game.state.host.active ? '表演中' : '邀请') : key === 'advertising' ? '推广' : tier ? 'Lv.' + tier : '添置', action: () => showCatalog(key) });
+        }
+        row(body, { title: '周转贷款', detail: game.state.loan ? '尚需偿还 $' + format(game.state.loan) : '借入 $1,000，偿还 $1,500', icon: '$', value: game.state.loan ? '还款中' : '查看', action: showLoan });
+      }, actions: [{ label: '返回舞厅', action: closePanel, primary: true }] });
+  }
+  function showCatalog(category) {
+    if (!hasGame || game.state.needsRecovery) return;
+    showPanel({ title: names[category], subtitle: '现金 $' + format(game.state.cash) + ' · 购买后立即生效', back: showManage,
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        for (const item of DiscoEngine.CATALOG[category]) {
+          const owned = !['advertising', 'host'].includes(category) && (game.state.equipment[category] || 0) >= item.tier;
+          const check = game.canBuy(category, item.tier);
+          row(body, { title: item.label, detail: owned ? '已拥有这个级别或更好的设备' : !check.ok ? check.message : item.description,
+            icon: icons[category], value: owned ? '已拥有' : '$' + format(item.cost), disabled: owned || !check.ok,
+            action: () => confirmPurchase(category, item) });
+        }
+      }, actions: [{ label: '返回经营', action: showManage }] });
+  }
+  function confirmPurchase(category, item) {
+    describe(item.label, [item.description, '本次花费 $' + format(item.cost) + '，购买后剩余 $' + format(game.state.cash - item.cost) + '。'],
+      { confirm: category === 'host' ? '邀请登台' : category === 'advertising' ? '确认推广' : '确认购买', cancel: () => showCatalog(category), back: () => showCatalog(category), action: () => {
+        const result = game.buy(category, item.tier);
+        game.drainMessages();
+        if (result.ok) { save(); closePanel(); updateHud(); say(result.message || '购买成功。'); }
+        else describe('暂时无法购买', [result.message], { action: () => showCatalog(category) });
+      } });
+  }
+  function showLoan() {
+    if (game.state.loan) { describe('贷款还款中', ['尚需偿还 $' + format(game.state.loan) + '。营业收入会自动用于偿还贷款，结清后可以再次申请。'], { action: showManage, back: showManage }); return; }
+    describe('周转贷款', ['借入 $1,000，需要偿还 $1,500。', '营业收入会自动用于还款，申请前请留意现金周转。'],
+      { confirm: '申请贷款', cancel: showManage, back: showManage, action: () => {
+        const result = game.takeLoan(); game.drainMessages(); save(); updateHud();
+        if (result.ok) { closePanel(); say('贷款到账 $1,000。'); }
+        else describe('暂时无法借款', [result.message], { action: showManage });
+      } });
+  }
+  function showStats() {
+    const s = game.state;
+    showPanel({ title: '经营状况', subtitle: currentMode === 'free' ? '自由经营 · 第 ' + s.day + ' 天' : '第 ' + s.level + ' 关 · 第 ' + s.day + ' 天', back: showMenu,
+      build(body) {
+        body.className = 'panel-body';
+        const list = node('dl', 'stat-list');
+        for (const [label, value] of [['现金', '$' + format(s.cash)], ['客人', format(s.visitors) + ' 人'], ['开心指数', s.happiness + '%'], ['剩余贷款', '$' + format(s.loan)], ['驻场 DJ', s.host.active ? s.host.name : '暂未邀请'], ...Object.entries(s.equipment).map(([key, tier]) => [names[key], tier ? '等级 ' + tier : '尚未添置'])]) {
+          const item = node('div'); item.append(node('dt', '', label), node('dd', '', value)); list.append(item);
+        }
+        body.append(list);
+      }, actions: [{ label: '回到舞厅', action: closePanel, primary: true }] });
+  }
+  function showHelp() {
+    showPanel({ title: '怎么玩', subtitle: '经营你自己的夜生活',
+      build(body) {
+        body.className = 'panel-body';
+        copy(body, ['自由经营没有通关目标和营业天数限制。资金耗尽后，可以重整营业，保留设备继续玩。',
+          '挑战模式保留三个目标关卡。两种模式分别存档，切换时不会覆盖另一边的进度。',
+          '轻点舞厅里的设备，或打开「经营」购买设备、邀请 DJ、推广和贷款。欢乐时间能提高气氛，也会持续消耗现金。',
+          '每个营业日为 30 秒。打开菜单、暂停或切到后台时，经营计时停止。',
+          '进度约每 5 秒保存，也会在暂停和退出时保存。存档位于当前设备的浏览器，清理网站数据会删除存档。',
+          '在 iPhone Safari 中打开，选择「分享 → 添加到主屏幕」，以后可以从桌面图标进入。',
+          offlineReady ? '离线资源已准备好，完成首次加载后可以离线游玩。' : '联网打开后会准备离线资源；请等待首次加载完成。']);
+      }, actions: [{ label: '知道了', action: closePanel, primary: true }] });
+  }
+  function showRecovery() {
+    describe('休息一下，再开场', ['现金用完了，舞厅已暂停营业。', '重整后获得 $2,000 启动资金、结清贷款；保留设备、客人和营业天数。临时 DJ、活动和欢乐时间会结束。'],
+      { confirm: '重整营业', cancel: closePanel, action: () => {
+        const result = game.recoverFreeBusiness();
+        if (result?.ok === false) { say(result.message || '当前无需重整。'); return; }
+        terminalShown = ''; paused = false; save(); closePanel(); updateHud(); say('舞厅重新开张。已有设备都还在，继续创造好时光。');
+      } });
+  }
+  function showResult() {
+    const s = game.state;
+    if (s.mode === 'free') { showRecovery(); return; }
+    const won = s.status === 'won';
+    if (won) {
+      store.data.unlocked = Math.max(store.data.unlocked, Math.min(3, s.level + 1));
+      store.data.scores[s.level - 1] = Math.max(store.data.scores[s.level - 1], s.score);
+    }
+    save();
+    describe(won ? '今晚，属于你！' : '这一晚结束了',
+      [won ? '第 ' + s.level + ' 关挑战完成。' : '这次没有完成目标，可以重新挑战，或到自由模式慢慢经营。',
+        '现金 $' + format(s.cash) + ' · 客人 ' + format(s.visitors) + ' · 开心指数 ' + s.happiness + '%'],
+      { confirm: won && s.level < 3 ? '挑战下一关' : '选择挑战', action: () => won && s.level < 3 ? intro(s.level + 1) : selectChallenge(), cancel: returnWelcome });
+  }
+  function updateHud() {
+    const s = game.state;
+    put('cash-value', '$' + format(s.cash)); put('visitors-value', format(s.visitors)); put('mood-value', s.happiness + '%');
+    put('day-value', '第 ' + s.day + ' 天'); put('mode-label', currentMode === 'free' ? '自由经营' : '第 ' + s.level + ' 关');
+    put('goal-label', currentMode === 'free' ? '不限营业天数，慢慢经营你的舞厅' : s.objective.description);
+    $('goal-progress').hidden = currentMode === 'free'; $('goal-progress').max = 1; $('goal-progress').value = s.progress;
+    $('goal-progress').setAttribute('aria-label', '挑战进度 ' + Math.round(s.progress * 100) + '%');
+    const pauseText = $('pause-toggle').querySelector('[data-label]'); if (pauseText) pauseText.textContent = paused ? '继续' : '暂停';
+    $('pause-toggle').setAttribute('aria-pressed', String(paused));
+    $('pause-toggle').setAttribute('aria-label', paused ? '继续营业' : '暂停营业');
+    $('pause-toggle').disabled = screen !== 'game' || s.needsRecovery || s.status !== 'playing';
+    $('happy-button').setAttribute('aria-pressed', String(s.happyHour));
+    $('happy-button').disabled = paused || s.needsRecovery || s.status !== 'playing';
+    $('happy-button').classList.toggle('is-active', s.happyHour);
+    canvas.dataset.screen = screen; canvas.dataset.mode = s.mode; canvas.dataset.day = s.day; canvas.dataset.cash = s.cash;
+    canvas.dataset.visitors = s.visitors; canvas.dataset.happiness = s.happiness; canvas.dataset.paused = String(paused || panel.open);
+    canvas.dataset.needsRecovery = String(Boolean(s.needsRecovery)); canvas.dataset.equipment = JSON.stringify(s.equipment);
+    canvas.setAttribute('aria-label', screen === 'welcome' ? '卡通舞厅，选择一种模式开始营业。' : (currentMode === 'free' ? '自由经营' : '挑战模式') + '，第' + s.day + '天，现金' + s.cash + '，客人' + s.visitors + '，开心指数' + s.happiness + '%。');
+  }
+  $('free-button').addEventListener('click', beginFree);
+  $('challenge-button').addEventListener('click', () => { audio?.resumeFromGesture?.(); selectChallenge(); });
+  $('continue-button').addEventListener('click', () => { audio?.resumeFromGesture?.(); resumeMode($('continue-button').dataset.mode); });
+  $('manage-button').addEventListener('click', showManage);
+  $('menu-button').addEventListener('click', showMenu);
+  $('help-toggle').addEventListener('click', showHelp);
+  $('happy-button').addEventListener('click', () => {
+    if (paused || panel.open || game.state.needsRecovery) return;
+    audio?.resumeFromGesture?.(); game.toggleHappyHour(); save(); updateHud();
+    say(game.state.happyHour ? '欢乐时间开启，客人更开心，现金也会持续消耗。' : '欢乐时间结束，恢复正常营业。');
+  });
+  $('pause-toggle').addEventListener('click', () => {
+    if (!hasGame) return;
+    paused = !paused; save(); syncAudio(); updateHud(); say(paused ? '营业已暂停，进度已保存。' : '继续营业。');
+  });
+  $('sound-toggle').addEventListener('click', async () => {
+    if (!audio) return;
+    try {
+      if (audio.enabled && audio.needsGesture) await audio.resumeFromGesture();
+      else await audio.setEnabled(!audio.enabled);
+      syncAudio();
+      $('sound-toggle').setAttribute('aria-pressed', String(audio.enabled));
+      $('sound-toggle').setAttribute('aria-label', audio.enabled ? '关闭音乐' : '开启音乐');
+      const text = $('sound-toggle').querySelector('[data-label]'); if (text) text.textContent = audio.enabled ? '音乐开' : '音乐关';
+      say(audio.enabled ? audio.needsGesture ? '请再轻点音乐按钮恢复声音。' : '音乐已开启。' : '音乐已关闭。');
+    } catch (_) { say('暂时无法播放，请再轻点音乐按钮。'); }
+  });
+  $('panel-close').addEventListener('click', closePanel);
+  $('panel-back').addEventListener('click', () => panelView?.back?.());
+  panel.addEventListener('close', () => { panelView = null; syncAudio(); updateHud(); });
+  panel.addEventListener('cancel', event => { if (panelView?.back) { event.preventDefault(); panelView.back(); } });
+  panel.addEventListener('click', event => {
+    if (event.target !== panel) return;
+    const b = panel.getBoundingClientRect();
+    if (event.clientX < b.left || event.clientX > b.right || event.clientY < b.top || event.clientY > b.bottom) closePanel();
+  });
+  let pointer = null;
+  canvas.addEventListener('pointerdown', event => { if (event.isPrimary && event.button === 0) pointer = { x: event.clientX, y: event.clientY, id: event.pointerId }; });
+  canvas.addEventListener('pointercancel', () => { pointer = null; });
+  canvas.addEventListener('pointerup', event => {
+    const start = pointer; pointer = null;
+    if (!start || start.id !== event.pointerId || Math.hypot(start.x - event.clientX, start.y - event.clientY) > 12) return;
+    if (screen !== 'game' || panel.open || paused || game.state.needsRecovery) return;
+    audio?.resumeFromGesture?.();
+    const category = renderer.pick?.(event.clientX, event.clientY);
+    if (category && names[category]) showCatalog(category);
+  });
+  document.addEventListener('keydown', event => {
+    if (event.ctrlKey || event.metaKey || event.altKey || event.repeat || panel.open || screen !== 'game' || event.target instanceof HTMLButtonElement) return;
+    if (event.key === ' ') { event.preventDefault(); $('happy-button').click(); }
+    if (event.key === 'Escape') showMenu();
+    if (event.key.toLowerCase() === 'm') showManage();
+  });
+  function visibility() { visible = !document.hidden; if (!visible) save(); syncAudio(); }
+  document.addEventListener('visibilitychange', visibility);
+  window.addEventListener('pagehide', () => { visible = false; save(); syncAudio(); });
+  window.addEventListener('pageshow', visibility);
+  const resize = () => renderer.resize?.();
+  window.addEventListener('resize', resize);
+  window.visualViewport?.addEventListener('resize', resize);
+  if (typeof ResizeObserver === 'function') new ResizeObserver(resize).observe(canvas);
+  function frame(now) {
+    const dt = Math.max(0, Math.min((now - lastTime) / 1000, .25)); lastTime = now;
+    const running = visible && !paused && !panel.open && screen === 'game' && hasGame && !game.state.needsRecovery && game.state.status === 'playing';
+    if (visible && !paused && !panel.open) { elapsed += dt; audio?.tick(); }
+    if (running) {
+      game.tick(dt); saveAge += dt;
+      if (game.state.needsRecovery || game.state.status !== 'playing') {
+        const key = game.state.mode + ':' + game.state.status + ':' + Boolean(game.state.needsRecovery);
+        if (terminalShown !== key) { terminalShown = key; save(); game.state.needsRecovery ? showRecovery() : showResult(); }
+      } else {
+        if (game.state.day !== lastDay) { lastDay = game.state.day; say('第 ' + lastDay + ' 天开场，继续经营你的舞厅。'); }
+        const ev = game.state.event;
+        if (ev && ev.id !== lastEvent) { lastEvent = ev.id; say(ev.label); }
+        if (!ev) lastEvent = null;
+        const notices = game.drainMessages();
+        if (notices.length) { say(notices.join(' ')); }
+      }
+      if (saveAge >= 5) save();
+    }
+    if (visible && now - lastPaint >= 1000 / 30) {
+      renderer.draw(screen === 'welcome' ? previewState : game.state, elapsed, { preview: screen === 'welcome', reducedMotion: reduced.matches, paused: paused || panel.open || Boolean(game.state.needsRecovery) });
+      lastPaint = now;
+    }
+    if (visible && now - lastHud > 200) { updateHud(); lastHud = now; }
+    requestAnimationFrame(frame);
+  }
+  await renderer.load?.();
+  document.body.dataset.screen = 'welcome'; refreshWelcome(); updateHud(); resize();
+  if (store.migrated) say('已找到原版挑战存档，可以选择「继续闯关」。');
+  else if (!store.available) say('当前浏览器无法保存进度，但仍可试玩。');
+  syncAudio(); requestAnimationFrame(frame);
+  if (document.querySelector('meta[name="disco-club-app"]') && 'serviceWorker' in navigator && window.isSecureContext) {
+    const register = async () => {
+      try {
+        const registration = await navigator.serviceWorker.register('./sw.js', { scope: './' });
+        if (!registration.active) {
+          const worker = registration.installing || registration.waiting;
+          if (!worker) return;
+          await new Promise((resolve, reject) => {
+            const check = () => { if (worker.state === 'activated') resolve(); else if (worker.state === 'redundant') reject(); };
+            worker.addEventListener('statechange', check); check();
+          });
+        }
+        offlineReady = true;
+      } catch (_) { /* Online play remains available when caching is unavailable. */ }
+    };
+    if (document.readyState === 'complete') register(); else window.addEventListener('load', register, { once: true });
+  }
+})();
+
+</script>
+</body>
+</html>
