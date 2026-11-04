@@ -1,6 +1,6 @@
 'use strict';
 const PREFIX='disco-club:'+new URL(self.registration.scope).pathname+':';
-const CACHE=PREFIX+'cf958cae0ea7';
+const CACHE=PREFIX+'c17ac457fbd8';
 const FILES=['./','./index.html','./app.webmanifest','./icon-180.png','./icon-192.png','./icon-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(FILES)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(key=>key.startsWith(PREFIX)&&key!==CACHE).map(key=>caches.delete(key)))).then(()=>self.clients.claim())));

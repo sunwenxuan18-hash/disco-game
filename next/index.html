@@ -84,6 +84,7 @@ a { color: var(--mint); text-underline-offset: 3px; }
 .mood .hud-value { color: #e1d4ff; }
 .goal-strip { grid-area: goal; min-width: 0; padding: 2px 0; }
 .goal-heading { display: flex; align-items: baseline; gap: 7px; min-width: 0; }
+.speed-button { align-self: center; flex: 0 0 auto; min-width: 44px; min-height: 44px; padding: 0 7px; border: 1px solid #43556a; border-radius: 12px; background: #223638; color: var(--mint); font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
 .day-badge { flex: 0 0 auto; font-size: 13px; color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
 .mode-badge { color: var(--violet); font-size: 12px; white-space: nowrap; }
 .goal-label { flex: 1; min-width: 0; text-align: right; color: var(--muted); font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
@@ -170,6 +171,21 @@ body[data-screen="game"] #welcome { display: none; }
 .panel-section-title { margin: 16px 0 10px; color: #d6def2; font-size: 14px; font-weight: 600; }
 .panel-section-title:first-child { margin-top: 0; }
 .empty-state { margin: 12px 0; color: var(--muted); text-align: center; font-size: 15px; line-height: 1.7; }
+.amount-field { display: grid; gap: 8px; margin: 14px 0; color: var(--muted); font-size: 16px; line-height: 1.5; }
+.amount-field input { width: 100%; min-width: 0; min-height: 48px; padding: 10px 14px; border: 1px solid #62748e; border-radius: 12px; background: #101a2c; color: var(--text); font-size: 20px; font-variant-numeric: tabular-nums; }
+.amount-field input:focus-visible { outline: 3px solid var(--mint); outline-offset: 2px; }
+.inline-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 14px; }
+.inline-actions > .button { flex: 1 1 140px; padding-inline: 12px; }
+.goal-card { padding: 15px; border: 1px solid var(--line); border-radius: 15px; background: #222b43; }
+.goal-card-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.goal-card h3 { margin: 0; font-size: 17px; line-height: 1.45; }
+.goal-card p { margin: 8px 0 12px; color: var(--muted); font-size: 15px; line-height: 1.6; }
+.goal-card progress { display: block; width: 100%; height: 7px; border: 0; border-radius: 6px; overflow: hidden; accent-color: var(--mint); }
+.decor-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 9px; margin: 8px 0 20px; padding: 12px; border: 1px solid #53647d; border-radius: 17px; background: #111b2e; }
+.decor-cell { display: grid; place-items: center; min-width: 0; min-height: 62px; padding: 7px 3px; border: 1px dashed #66878a; border-radius: 10px; color: var(--mint); background: #21393f; font-size: 14px; line-height: 1.5; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.decor-cell:disabled { border-style: solid; border-color: #4e536d; color: #b5b8cb; background: #2b2d43; }
+.decor-cell.is-selected { border-style: solid; border-color: var(--peach); color: #ffe1ca; background: #514236; }
+.button:disabled { opacity: .6; }
 
 button { transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease; }
 .button:active, .nav-button:active { transform: translateY(1px); filter: brightness(.92); }
@@ -258,6 +274,8 @@ button { transition: background-color 120ms ease, border-color 120ms ease, color
   
   
   
+  
+  
 <meta name="disco-club-app" content="yes">
 <link rel="manifest" href="./app.webmanifest">
 <link rel="apple-touch-icon" href="./icon-180.png">
@@ -300,6 +318,7 @@ button { transition: background-color 120ms ease, border-color 120ms ease, color
         <span class="day-badge" id="day-value">第 1 天</span>
         <span class="mode-badge" id="mode-label">自由经营</span>
         <span id="goal-label" class="goal-label">把今晚经营得更好</span>
+        <button id="speed-button" class="speed-button" type="button" aria-label="经营速度，当前 1 倍">1×</button>
       </div>
       <progress id="goal-progress" max="1" value="0" aria-label="经营目标进度"></progress>
     </section>
@@ -326,7 +345,7 @@ button { transition: background-color 120ms ease, border-color 120ms ease, color
 
     <nav class="game-nav" aria-label="舞厅操作">
       <button id="manage-button" class="nav-button manage-button" type="button"><span class="nav-icon" aria-hidden="true">✦</span><span>经营</span></button>
-      <button id="happy-button" class="nav-button happy-button" type="button" aria-pressed="false"><span class="nav-icon" aria-hidden="true">♫</span><span>欢乐时间</span></button>
+      <button id="happy-button" class="nav-button happy-button" type="button" aria-pressed="false"><span class="nav-icon" aria-hidden="true">♫</span><span data-label>员工</span></button>
       <button id="menu-button" class="nav-button menu-button" type="button"><span class="nav-icon menu-symbol" aria-hidden="true">☰</span><span>菜单</span></button>
     </nav>
 
@@ -1103,25 +1122,584 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
 
 </script>
 <script>
+/* Independent free-business simulation. Classic engine.js is deliberately not imported.
+ * Money is kept at full precision internally; public amounts are rounded only for display.
+ * Online work uses fixed 500 ms steps. The controller, not tick(), applies the saved speed.
+ * Offline debt uses chronological analytic integration, independent of claim partitioning. */
+(function (root) {
+  'use strict';
+  const NIGHT_SECONDS = 180, STEP = 0.5, HOUR = 3600000, DAY = 24 * HOUR, EPS = 1e-9;
+  const clone = value => JSON.parse(JSON.stringify(value));
+  const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+  const money = x => Math.round((x + Number.EPSILON) * 100) / 100;
+  const finite = x => typeof x === 'number' && Number.isFinite(x);
+  const freeze = object => { Object.values(object).forEach(v => { if (v && typeof v === 'object') freeze(v); }); return Object.freeze(object); };
+  const LOAN = freeze({ rate: 0.01, capRatio: 0.10, min: 100, max: 3000 });
+  const requirement = (venue, reputation, admissions = 0) => ({ venue, reputation, admissions });
+  const CATALOG = {
+    venue: [
+      { tier: 1, label: '街角舞厅', value: 0, maintenance: 12, capacity: 20, description: '最多同时接待20位客人。', requirement: requirement(1, 0) },
+      { tier: 2, label: '城市俱乐部', value: 3600, maintenance: 28, capacity: 36, description: '接待上限20→36，开放二级设施。', requirement: requirement(1, 45, 60) },
+      { tier: 3, label: '大型音乐会馆', value: 12000, maintenance: 55, capacity: 56, description: '接待上限36→56，开放三级设施。', requirement: requirement(2, 65, 250) }
+    ],
+    floor: [
+      { tier: 1, label: '舒适舞池', value: 600, maintenance: 3, comfort: 20, description: '舒适人数提高至20，减少拥挤造成的体验下降。' },
+      { tier: 2, label: '宽敞舞池', value: 1600, maintenance: 6, comfort: 36, description: '舒适人数提高至36。' },
+      { tier: 3, label: '大型舞池', value: 3600, maintenance: 10, comfort: 56, description: '舒适人数提高至56。' }
+    ],
+    lights: [
+      { tier: 1, label: '彩色灯光', value: 400, maintenance: 3, mood: 3, description: '跳舞体验提高3分。' },
+      { tier: 2, label: '节奏灯阵', value: 1400, maintenance: 8, mood: 6, description: '跳舞体验提高6分。' },
+      { tier: 3, label: '专业舞台灯', value: 3600, maintenance: 15, mood: 10, description: '跳舞体验提高10分。' }
+    ],
+    speakers: [
+      { tier: 1, label: '立体声音响', value: 600, maintenance: 4, mood: 3, description: '音乐体验提高3分。' },
+      { tier: 2, label: '环绕音响', value: 1800, maintenance: 10, mood: 6, description: '音乐体验提高6分。' },
+      { tier: 3, label: '现场级音响', value: 4200, maintenance: 18, mood: 9, description: '音乐体验提高9分。' }
+    ],
+    decks: [
+      { tier: 1, label: '基础DJ台', value: 500, maintenance: 3, mood: 2, description: '在岗DJ的音乐体验额外提高2分。' },
+      { tier: 2, label: '混音DJ台', value: 1600, maintenance: 7, mood: 4, description: '在岗DJ的音乐体验额外提高4分。' },
+      { tier: 3, label: '专业DJ台', value: 3800, maintenance: 12, mood: 7, description: '在岗DJ的音乐体验额外提高7分。' }
+    ],
+    bar: [
+      { tier: 1, label: '小吧台', value: 450, maintenance: 6, stations: 1, seconds: 15, description: '开放酒水；调酒师每杯15秒，店主自营每杯24秒。' },
+      { tier: 2, label: '双工位吧台', value: 1800, maintenance: 14, stations: 2, seconds: 13, description: '每杯基础时间13秒；资深调酒师可同时使用两个工位。' },
+      { tier: 3, label: '专业吧台', value: 4800, maintenance: 25, stations: 2, seconds: 11, description: '每杯基础时间11秒，提高实际出酒能力。' }
+    ],
+    lounge: [
+      { tier: 1, label: '休息角', value: 350, maintenance: 3, seats: 2, description: '2个休息位，完成休息改善体验。' },
+      { tier: 2, label: '沙发休息区', value: 1400, maintenance: 7, seats: 4, description: '4个休息位，改善更多客人的体验。' },
+      { tier: 3, label: '宽敞休息区', value: 3400, maintenance: 14, seats: 7, description: '7个休息位；休息不会提前结束计划停留。' }
+    ]
+  };
+  for (const [category, items] of Object.entries(CATALOG)) for (const item of items) {
+    item.category = category;
+    if (!item.requirement) item.requirement = requirement(item.tier, [0, 0, 45, 65][item.tier]);
+  }
+  freeze(CATALOG);
+  const STAFF = {
+    dj: { label: 'DJ', hireCost: 250, baseWage: 40, description: '实际跳舞时改善体验；完成音乐服务获得经验。', benefits: ['音乐体验+6', '音乐体验+10', '音乐体验+14'] },
+    bartender: { label: '调酒师', hireCost: 300, baseWage: 45, description: '完成饮品获得经验，工作位与技能共同限制吞吐。', benefits: ['标准出酒速度', '出酒时间缩短15%', '出酒时间缩短30%，最多同时使用2工位'] },
+    server: { label: '服务员', hireCost: 220, baseWage: 30, description: '实际接待获得经验，增加客人的排队耐心与接待体验。', benefits: ['接待体验+2、耐心+4秒', '接待体验+4、耐心+8秒', '接待体验+6、耐心+12秒'] },
+    manager: { label: '经理', hireCost: 500, baseWage: 35, description: '每协调5次实际接待获得经验；有限改善离线效率。', benefits: ['离线四段效率82/53/22/6%', '离线四段效率84/56/24/7%', '离线四段效率86/59/26/8%'] }
+  };
+  for (const spec of Object.values(STAFF)) {
+    spec.promotions = [
+      { level: 2, cost: 600, wage: spec.baseWage + 10, wageDelta: 10, requiredXp: 30, description: spec.benefits[1] },
+      { level: 3, cost: 1400, wage: spec.baseWage + 25, wageDelta: 15, requiredXp: 120, description: spec.benefits[2] }
+    ];
+  }
+  freeze(STAFF);
+  const THEMES = freeze([
+    { id: 'classic', label: '经典蓝调', cost: 0, description: '清爽的蓝色舞厅。仅改变外观。' },
+    { id: 'neon', label: '霓虹之夜', cost: 900, description: '紫红霓虹主题。买下后可免费切换。' },
+    { id: 'tropical', label: '热带假日', cost: 900, description: '暖色热带主题。买下后可免费切换。' }
+  ]);
+  const DECOR = freeze([
+    { id: 'plant', label: '绿植', cost: 120, zones: ['dance', 'bar', 'lounge'], description: '可自由摆放的盆栽，仅改变外观。' },
+    { id: 'sofa', label: '装饰沙发', cost: 280, zones: ['lounge'], description: '装饰沙发；实际休息位由休息区等级决定。' },
+    { id: 'neonSign', label: '霓虹招牌', cost: 220, zones: ['dance', 'bar'], description: '自由摆放的彩色招牌。' },
+    { id: 'mirrorBall', label: '镜面球', cost: 380, zones: ['dance'], description: '舞池镜球装饰。' }
+  ]);
+  const LEDGER_FIELDS = ['ticketRevenue', 'drinkRevenue', 'revenue', 'ingredients', 'wages', 'maintenance', 'operatingProfit', 'repayments', 'manualRepayments', 'interestAccrued', 'admissions', 'drinksSold', 'abandoned', 'completedGuests', 'satisfactionTotal', 'capital', 'financing'];
+  const blankLedger = night => Object.assign({ night }, Object.fromEntries(LEDGER_FIELDS.map(key => [key, 0])));
+  const fail = message => ({ ok: false, message });
+  const ok = (message = '', extra = {}) => ({ ok: true, message, ...extra });
+  const balance = debt => debt ? Math.max(0, debt.principal + debt.interest) : 0;
+  function payDebt(debt, requested) {
+    const amount = Math.min(Math.max(0, requested), balance(debt));
+    const interestPaid = Math.min(amount, debt.interest);
+    debt.interest = Math.max(0, debt.interest - interestPaid);
+    const principalPaid = amount - interestPaid;
+    debt.principal = Math.max(0, debt.principal - principalPaid);
+    return { amount, interestPaid, principalPaid };
+  }
+  // Constant-profit chronological loan evolution. Interest never earns interest.
+  // The cap includes all interest ever accrued, including interest already paid.
+  function advanceDebt(debt, nights, paymentRate) {
+    let remaining = nights, repaid = 0, interest = 0;
+    for (let guard = 0; remaining > EPS && balance(debt) > EPS && guard < 12; guard++) {
+      const principal = debt.principal, k = debt.rate, room = Math.max(0, debt.cap - debt.totalInterest);
+      if (room <= EPS || k <= 0 || principal <= EPS) {
+        repaid += payDebt(debt, paymentRate * remaining).amount;
+        remaining = 0;
+        break;
+      }
+      const interestRate = k * principal;
+      if (debt.interest > EPS || paymentRate <= interestRate + EPS) {
+        const clearTime = paymentRate > interestRate ? debt.interest / (paymentRate - interestRate) : Infinity;
+        const dt = Math.min(remaining, room / interestRate, clearTime || Infinity);
+        const accrued = Math.min(room, interestRate * dt);
+        debt.interest += accrued; debt.totalInterest += accrued; interest += accrued;
+        repaid += payDebt(debt, paymentRate * dt).amount;
+        remaining -= dt;
+        if (debt.interest < EPS) debt.interest = 0;
+        continue;
+      }
+      const toZero = Math.log(paymentRate / (paymentRate - k * principal)) / k;
+      let dt = Math.min(remaining, toZero);
+      const valueAt = t => principal + (principal - paymentRate / k) * Math.expm1(k * t);
+      const interestAt = t => Math.max(0, valueAt(t) - principal + paymentRate * t);
+      if (interestAt(dt) > room) {
+        let low = 0, high = dt;
+        for (let i = 0; i < 60; i++) { const mid = (low + high) / 2; if (interestAt(mid) < room) low = mid; else high = mid; }
+        dt = (low + high) / 2;
+      }
+      const nextPrincipal = Math.max(0, valueAt(dt));
+      const accrued = Math.min(room, Math.max(0, nextPrincipal - principal + paymentRate * dt));
+      debt.totalInterest += accrued; interest += accrued;
+      repaid += principal - nextPrincipal + accrued;
+      debt.principal = nextPrincipal;
+      remaining -= dt;
+      if (debt.cap - debt.totalInterest < EPS) debt.totalInterest = debt.cap;
+    }
+    return { repaid, interest };
+  }
+  class Game {
+    constructor(options = {}) { this.seed = finite(options.seed) ? options.seed >>> 0 : Date.now() >>> 0; this.startFree(); }
+    startFree() {
+      this._carry = 0; this._messages = [];
+      this._r = {
+        cash: 2000, elapsed: 0, offlineNights: 0, venue: 1,
+        equipment: { floor: 0, lights: 0, speakers: 0, decks: 0, bar: 0, lounge: 0, ball: 0, dancer: 0 },
+        reputation: 35, maxReputation: 35, staff: Object.fromEntries(Object.keys(STAFF).map(role => [role, { hired: false, onDuty: false, level: 1, xp: 0, work: 0 }])),
+        basicMode: false, needsRecovery: false, speed: 1, debt: null, debtProfitBaseline: 0, autoPaid: 0,
+        guests: [], nextGuest: 1, nextArrival: 2, theme: 'classic', ownedThemes: ['classic'], decor: [], nextDecor: 1,
+        ledger: { current: blankLedger(1), last: null, lifetime: blankLedger(0), offline: { hours: 0, equivalentNights: 0, profit: 0, repaid: 0, interest: 0 } },
+        offline: { cursor: null, history: [], chainStart: null }, legacyAssets: null,
+        completedGoals: [], sequence: 0, lastNotice: ''
+      };
+      this._sync(); return this.state;
+    }
+    _rand() { this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0; return this.seed / 4294967296; }
+    _emit(message) { this._r.lastNotice = message; this._r.sequence++; this._messages.push(message); if (this._messages.length > 20) this._messages.shift(); }
+    drainMessages() { return this._messages.splice(0); }
+    _item(category, tier = this._r.equipment[category]) { return CATALOG[category]?.find(item => item.tier === tier); }
+    _duty(role) { return !this._r.basicMode && this._r.staff[role].hired && this._r.staff[role].onDuty; }
+    _wage(role) { const staff = this._r.staff[role]; return staff.level === 1 ? STAFF[role].baseWage : STAFF[role].promotions[staff.level - 2].wage; }
+    _wages() { return Object.keys(STAFF).reduce((total, role) => total + (this._duty(role) ? this._wage(role) : 0), 0); }
+    _maintenance() { return this._r.basicMode ? 0 : this._item('venue', this._r.venue).maintenance + Object.keys(this._r.equipment).reduce((sum, key) => sum + (this._item(key)?.maintenance || 0), 0); }
+    _capacity() { return this._r.basicMode ? 12 : this._item('venue', this._r.venue).capacity; }
+    _comfort() { return this._r.basicMode ? 12 : this._item('floor')?.comfort || 12; }
+    _demand() { return this._r.basicMode ? 12 : 18 + this._r.reputation * 0.5; }
+    _bar() {
+      const item = this._r.basicMode ? null : this._item('bar');
+      if (!item) return { slots: 0, seconds: 0 };
+      if (!this._duty('bartender')) return { slots: 1, seconds: 24 };
+      const level = this._r.staff.bartender.level;
+      return { slots: Math.min(item.stations, level === 3 ? 2 : 1), seconds: item.seconds * [1, 1, 0.85, 0.7][level] };
+    }
+    _reserve() {
+      if (!this._r.debt) return 0;
+      return Math.min(balance(this._r.debt), Math.max(0, (this._r.ledger.current.operatingProfit - this._r.debtProfitBaseline) * 0.2 - this._r.autoPaid));
+    }
+    _available() { return Math.max(0, this._r.cash - this._reserve()); }
+    _book(field, amount) {
+      for (const ledger of [this._r.ledger.current, this._r.ledger.lifetime]) ledger[field] += amount;
+      if (field === 'ticketRevenue' || field === 'drinkRevenue') {
+        for (const ledger of [this._r.ledger.current, this._r.ledger.lifetime]) { ledger.revenue += amount; ledger.operatingProfit += amount; }
+        this._r.cash += amount;
+      } else if (['ingredients', 'wages', 'maintenance'].includes(field)) {
+        for (const ledger of [this._r.ledger.current, this._r.ledger.lifetime]) ledger.operatingProfit -= amount;
+        this._r.cash -= amount;
+      }
+    }
+    _spend(amount) { this._r.cash -= amount; this._book('capital', amount); }
+    _experience(role, amount = 1) { if (this._duty(role)) this._r.staff[role].xp += amount; }
+    _applyPayment(amount, automatic) {
+      if (!this._r.debt) return 0;
+      const paid = payDebt(this._r.debt, Math.min(Math.max(0, this._r.cash), amount)).amount;
+      this._r.cash -= paid;
+      this._book(automatic ? 'repayments' : 'manualRepayments', paid);
+      if (automatic) this._r.autoPaid += paid;
+      if (balance(this._r.debt) < EPS) this._r.debt = null;
+      return paid;
+    }
+    _flushAuto() { return this._applyPayment(this._reserve(), true); }
+    _goals() {
+      const r = this._r;
+      const goals = [
+        { id: 'welcome20', label: '第一批常客', description: '累计实际接待20位客人。', progress: r.ledger.lifetime.admissions, target: 20 },
+        { id: 'drinks10', label: '吧台开张', description: '实际售出10杯饮品。', progress: r.ledger.lifetime.drinksSold, target: 10 },
+        { id: 'reputation45', label: '街区口碑', description: '口碑达到45，且接待60人后可扩建。', progress: r.maxReputation, target: 45 },
+        { id: 'visitors60', label: '稳定客源', description: '累计接待60人，配合45口碑解锁城市俱乐部。', progress: r.ledger.lifetime.admissions, target: 60 },
+        { id: 'venue2', label: '城市俱乐部', description: '扩建至第二阶段。', progress: r.venue, target: 2 },
+        { id: 'reputation65', label: '全城知名', description: '口碑达到65，且接待250人后可建设音乐会馆。', progress: r.maxReputation, target: 65 },
+        { id: 'visitors250', label: '大家的舞厅', description: '累计实际接待250人。', progress: r.ledger.lifetime.admissions, target: 250 },
+        { id: 'venue3', label: '音乐会馆', description: '扩建至第三阶段。', progress: r.venue, target: 3 }
+      ];
+      for (const goal of goals) { if (goal.progress >= goal.target && !r.completedGoals.includes(goal.id)) r.completedGoals.push(goal.id); goal.complete = r.completedGoals.includes(goal.id); }
+      r.completedGoals.sort();
+      return goals;
+    }
+    _sync() {
+      const r = this._r, active = r.guests.filter(guest => guest.activity !== 'leave');
+      const staff = {};
+      for (const role of Object.keys(STAFF)) {
+        const source = r.staff[role], next = STAFF[role].promotions.find(p => p.level === source.level + 1);
+        staff[role] = { ...source, wage: this._wage(role), nextXp: next?.requiredXp || null,
+          benefit: STAFF[role].benefits[source.level - 1], promotion: next ? { ...next, eligible: source.hired && source.xp >= next.requiredXp } : null };
+      }
+      const debt = r.debt ? { ...r.debt, total: money(balance(r.debt)), remainingCap: money(Math.max(0, r.debt.cap - r.debt.totalInterest)) } : null;
+      const ledger = clone(r.ledger);
+      for (const item of [ledger.current, ledger.last, ledger.lifetime, ledger.offline]) if (item) for (const key of Object.keys(item)) if (finite(item[key])) item[key] = money(item[key]);
+      this.state = {
+        mode: 'free', status: 'playing', level: 1, day: Math.floor(r.elapsed / NIGHT_SECONDS) + Math.floor(r.offlineNights + EPS) + 1,
+        elapsed: r.elapsed, timeInNight: r.elapsed % NIGHT_SECONDS, dayProgress: (r.elapsed % NIGHT_SECONDS) / NIGHT_SECONDS,
+        cash: money(this._available()), repaymentReserve: money(this._reserve()), unpaidOperatingCosts: money(Math.max(0, -r.cash)),
+        visitors: active.length, happiness: Math.round(active.length ? active.reduce((sum, guest) => sum + guest.satisfaction, 0) / active.length : r.reputation),
+        needsRecovery: r.needsRecovery, basicMode: r.basicMode, equipment: { ...r.equipment }, venue: r.venue, capacity: this._capacity(), comfort: this._comfort(),
+        reputation: money(r.reputation), maxReputation: money(r.maxReputation), staff, speed: r.speed,
+        host: { active: this._duty('dj'), name: this._duty('dj') ? `${STAFF.dj.label} · ${r.staff.dj.level}级` : '店主播放音乐' },
+        happyHour: false, loan: money(balance(r.debt)), debt, theme: r.theme, ownedThemes: r.ownedThemes.slice(), decor: clone(r.decor), decorInventory: clone(r.decor.filter(item => !item.placed)),
+        guests: clone(r.guests), goals: this._goals(), ledger, maintenancePerNight: this._maintenance(), wagesPerNight: this._wages(),
+        notice: { id: r.sequence, text: r.lastNotice }, progress: 0,
+        objective: { title: '自由经营', description: '没有终点，按自己的节奏经营。', target: null },
+        party: { active: false }, event: null
+      };
+    }
+    quote(category, tier) {
+      const target = this._item(category, Number(tier));
+      if (!target) return fail('没有这个建设项目。');
+      const currentTier = category === 'venue' ? this._r.venue : this._r.equipment[category];
+      const current = this._item(category, currentTier), cost = Math.max(0, target.value - (current?.value || 0));
+      const req = target.requirement;
+      let requirementMessage = '';
+      if (this._r.venue < req.venue) requirementMessage = `需要${req.venue}阶段场地。`;
+      else if (this._r.maxReputation + EPS < req.reputation) requirementMessage = `需要曾达到${req.reputation}口碑。`;
+      else if (this._r.ledger.lifetime.admissions < req.admissions) requirementMessage = `需要累计接待${req.admissions}位客人。`;
+      const result = { cost, maintenanceDelta: target.maintenance - (current?.maintenance || 0), cashAfter: money(this._available() - cost),
+        description: target.description, currentValue: current?.value || 0, targetValue: target.value, currentTier, tier: target.tier, item: target, requirementMessage };
+      if (currentTier >= target.tier) return { ...result, ...fail('已拥有这个等级或更好的设施。') };
+      if (requirementMessage) return { ...result, ...fail(requirementMessage) };
+      if (cost > this._available() + EPS) return { ...result, ...fail('可用现金不足，已产生的费用和还贷预留不能用于建设。') };
+      return { ...result, ...ok() };
+    }
+    canBuy(category, tier) { return this.quote(category, tier); }
+    buy(category, tier) {
+      const quote = this.quote(category, tier); if (!quote.ok) return quote;
+      this._spend(quote.cost);
+      if (category === 'venue') this._r.venue = Number(tier); else this._r.equipment[category] = Number(tier);
+      this._emit(`${quote.item.label}建设完成，支付$${quote.cost}。`); this._sync(); return { ...quote, message: this._r.lastNotice };
+    }
+    hire(role) {
+      if (!STAFF[role]) return fail('没有这个岗位。');
+      if (this._r.staff[role].hired) return fail('该岗位已招聘。');
+      if (STAFF[role].hireCost > this._available() + EPS) return fail('可用现金不足。');
+      this._spend(STAFF[role].hireCost); this._r.staff[role].hired = true; this._r.staff[role].onDuty = !this._r.basicMode;
+      this._emit(`${STAFF[role].label}已加入，工资按实际在岗时间计算。`); this._sync(); return ok(this._r.lastNotice);
+    }
+    setDuty(role, onDuty) {
+      if (!STAFF[role] || !this._r.staff[role].hired) return fail('请先招聘该员工。');
+      if (typeof onDuty !== 'boolean') return fail('岗位状态无效。');
+      if (onDuty && this._r.basicMode) return fail('基础自营期间员工休息，请先恢复正常经营。');
+      this._r.staff[role].onDuty = onDuty; this._sync(); return ok(onDuty ? '员工开始工作。' : '员工休息，之后不再产生该岗位工资。');
+    }
+    promote(role) {
+      const staff = this._r.staff[role], next = staff && STAFF[role].promotions.find(p => p.level === staff.level + 1);
+      if (!staff?.hired || !next) return fail('没有可晋升的员工。');
+      if (staff.xp < next.requiredXp) return fail(`需要${next.requiredXp}点实际工作经验。`);
+      if (next.cost > this._available() + EPS) return fail('可用现金不足。');
+      this._spend(next.cost); staff.level = next.level;
+      this._emit(`${STAFF[role].label}晋升至${next.level}级；在岗每夜工资$${next.wage}。`); this._sync(); return ok(this._r.lastNotice);
+    }
+    setSpeed(value) { if (![0.5, 1, 2, 5].includes(value)) return fail('不支持这个倍速。'); this._r.speed = value; this._sync(); return ok(); }
+    setBasicMode(enabled) {
+      if (typeof enabled !== 'boolean') return fail('经营配置无效。');
+      this._r.basicMode = enabled;
+      if (enabled) {
+        for (const staff of Object.values(this._r.staff)) staff.onDuty = false;
+        for (const guest of this._r.guests) if (guest.activity === 'queue' || guest.activity === 'drink') { guest.activity = 'dance'; guest.drinkAttempted = true; guest.serviceRemaining = 0; }
+        this._r.needsRecovery = false;
+      }
+      this._emit(enabled ? '进入基础自营：员工休息、额外设施停用，资产和债务保留。' : '恢复正常经营；员工仍保持休息，可逐一安排上岗。'); this._sync(); return ok(this._r.lastNotice);
+    }
+    recoverFreeBusiness() { return this.setBasicMode(true); }
+    takeLoan(amount = 1000) {
+      amount = Number(amount);
+      if (this._r.debt) return fail('请先结清当前贷款。');
+      if (!finite(amount) || amount < LOAN.min || amount > LOAN.max || !Number.isInteger(amount)) return fail(`借款金额须为${LOAN.min}–${LOAN.max}的整数。`);
+      this._r.debt = { principal: amount, interest: 0, original: amount, totalInterest: 0, rate: LOAN.rate, cap: amount * LOAN.capRatio };
+      this._r.debtProfitBaseline = Math.max(0, this._r.ledger.current.operatingProfit); this._r.autoPaid = 0;
+      this._r.cash += amount; this._book('financing', amount); this._r.needsRecovery = false;
+      this._emit(`借款$${amount}到账，每营业夜按剩余本金计息1%，整笔利息最多$${amount * LOAN.capRatio}。`); this._sync(); return ok(this._r.lastNotice);
+    }
+    repaymentQuote(requested = Infinity) {
+      if (!this._r.debt) return { ...fail('当前没有贷款。'), amount: 0, automaticAmount: 0, manualAmount: 0, interestPaid: 0, principalPaid: 0, remaining: 0, cashAfter: money(this._available()) };
+      if (requested !== Infinity && (!finite(requested) || requested < 0)) return fail('还款金额无效。');
+      const debt = clone(this._r.debt), available = Math.max(0, this._r.cash);
+      const automatic = payDebt(debt, Math.min(this._reserve(), available));
+      const manual = payDebt(debt, Math.min(requested, available - automatic.amount));
+      return ok('', { amount: automatic.amount + manual.amount, automaticAmount: automatic.amount, manualAmount: manual.amount,
+        interestPaid: automatic.interestPaid + manual.interestPaid, principalPaid: automatic.principalPaid + manual.principalPaid,
+        remaining: balance(debt), cashAfter: available - automatic.amount - manual.amount });
+    }
+    repay(amount = Infinity) {
+      const quote = this.repaymentQuote(amount); if (!quote.ok) return quote;
+      this._applyPayment(quote.automaticAmount, true); this._applyPayment(quote.manualAmount, false);
+      this._emit(this._r.debt ? `本次偿还$${money(quote.amount)}，剩余$${money(balance(this._r.debt))}。` : '贷款已全部结清，后续利息与自动还款已停止。'); this._sync(); return { ...quote, message: this._r.lastNotice };
+    }
+    setTheme(id) {
+      const item = THEMES.find(theme => theme.id === id); if (!item) return fail('没有这个主题。');
+      if (!this._r.ownedThemes.includes(id)) {
+        if (item.cost > this._available() + EPS) return fail('可用现金不足。');
+        this._spend(item.cost); this._r.ownedThemes.push(id);
+      }
+      this._r.theme = id; this._sync(); return ok('主题已应用；已购主题可免费切换。');
+    }
+    placeDecor(itemId, zone, x, y, existingId) {
+      const item = DECOR.find(decor => decor.id === itemId);
+      if (!item || !item.zones.includes(zone) || !Number.isInteger(x) || !Number.isInteger(y) || x < 0 || x > 3 || y < 0 || y > 2) return fail('这个装饰不能放在所选位置。');
+      let owned = existingId == null ? null : this._r.decor.find(decor => decor.id === existingId && decor.itemId === itemId);
+      if (existingId != null && !owned) return fail('没有这件已购装饰。');
+      if (this._r.decor.some(decor => decor.placed && decor.id !== existingId && decor.zone === zone && decor.x === x && decor.y === y)) return fail('该位置已有装饰。');
+      if (!owned) {
+        if (this._r.decor.length >= 100) return fail('装饰收藏已达100件。');
+        if (item.cost > this._available() + EPS) return fail('可用现金不足。');
+        this._spend(item.cost); owned = { id: `decor-${this._r.nextDecor++}`, itemId }; this._r.decor.push(owned);
+      }
+      Object.assign(owned, { zone, x, y, placed: true }); this._sync(); return ok('装饰已放置。', { id: owned.id });
+    }
+    removeDecor(id) { const item = this._r.decor.find(decor => decor.id === id); if (!item) return fail('没有这件装饰。'); item.placed = false; this._sync(); return ok('装饰已收进仓库，下次摆放免费。'); }
+    _arrive() {
+      const r = this._r, active = r.guests.filter(guest => guest.activity !== 'leave').length;
+      if (active < this._capacity()) {
+        const stay = 84 + this._rand() * 12;
+        const guest = { id: r.nextGuest++, activity: 'dance', arrival: r.elapsed, elapsed: 0, stay, leaveAt: r.elapsed + stay,
+          wantsDrink: !r.basicMode && r.equipment.bar > 0 && this._rand() < 0.6, drinkAttempted: false, drinkDone: false, queueFailed: false,
+          queueAt: 0, serviceRemaining: 0, restDone: false, restUntil: 0, djWork: 0, djCredited: false, satisfaction: 65,
+          lookSeed: Math.floor(this._rand() * 1000000) };
+        if (this._duty('server')) { guest.satisfaction += this._r.staff.server.level * 2; this._experience('server'); }
+        if (this._duty('manager')) { const manager = r.staff.manager; manager.work++; if (manager.work % 5 === 0) this._experience('manager'); }
+        r.guests.push(guest); this._book('ticketRevenue', 10); this._book('admissions', 1);
+      }
+      r.nextArrival += NIGHT_SECONDS / this._demand() * (0.8 + this._rand() * 0.4);
+    }
+    _guests(dt) {
+      const r = this._r, active = r.guests.filter(guest => guest.activity !== 'leave');
+      const bar = this._bar(), patience = 30 + (this._duty('server') ? r.staff.server.level * 4 : 0);
+      const served = new Set(active.filter(guest => guest.activity === 'drink').slice(0, bar.slots).map(guest => guest.id));
+      let seatsUsed = active.filter(guest => guest.activity === 'rest').length;
+      const seats = r.basicMode ? 0 : this._item('lounge')?.seats || 0;
+      for (const guest of active) {
+        guest.elapsed = r.elapsed - guest.arrival;
+        if (r.elapsed + EPS >= guest.leaveAt) {
+          guest.activity = 'leave'; guest.departedAt = r.elapsed;
+          this._book('completedGuests', 1); this._book('satisfactionTotal', clamp(guest.satisfaction, 0, 100));
+          continue;
+        }
+        if (guest.activity === 'drink') {
+          // Duty and facilities take effect immediately, including work already in progress.
+          if (served.has(guest.id)) {
+            guest.serviceRemaining -= dt / bar.seconds;
+            if (guest.serviceRemaining <= EPS) {
+              guest.drinkDone = true; guest.activity = 'dance'; guest.satisfaction = clamp(guest.satisfaction + 7, 0, 100);
+              this._book('drinkRevenue', 15); this._book('ingredients', 5); this._book('drinksSold', 1); this._experience('bartender');
+            }
+          }
+        } else if (guest.activity === 'queue') {
+          if (r.elapsed - guest.queueAt > patience) {
+            guest.activity = 'dance'; guest.queueFailed = true; guest.satisfaction = Math.max(0, guest.satisfaction - 12); this._book('abandoned', 1);
+          }
+        } else if (guest.activity === 'rest') {
+          if (r.elapsed >= guest.restUntil) { guest.activity = 'dance'; guest.satisfaction = clamp(guest.satisfaction + 5, 0, 100); seatsUsed--; }
+        } else {
+          const dj = this._duty('dj');
+          const quality = 65 + (r.basicMode ? 0 : (this._item('lights')?.mood || 0) + (this._item('speakers')?.mood || 0))
+            + (dj ? [0, 6, 10, 14][r.staff.dj.level] + (this._item('decks')?.mood || 0) : 0)
+            - (active.length > this._comfort() ? 9 : 0) - (guest.queueFailed ? 12 : 0) + (guest.drinkDone ? 7 : 0) + (guest.restDone ? 3 : 0);
+          guest.satisfaction = clamp(guest.satisfaction + (quality - guest.satisfaction) * dt / 25, 0, 100);
+          if (dj && !guest.djCredited) { guest.djWork += dt; if (guest.djWork >= 30) { guest.djCredited = true; this._experience('dj'); } }
+          if (guest.wantsDrink && !guest.drinkAttempted && guest.elapsed >= 8 && !r.basicMode) {
+            guest.drinkAttempted = true; guest.activity = 'queue'; guest.queueAt = r.elapsed;
+          } else if (!guest.restDone && guest.elapsed >= 50 && seatsUsed < seats) {
+            guest.restDone = true; guest.activity = 'rest'; guest.restUntil = r.elapsed + 12; seatsUsed++;
+          }
+        }
+      }
+      let serving = r.guests.filter(guest => guest.activity === 'drink').length;
+      for (const guest of r.guests.filter(guest => guest.activity === 'queue').sort((a, b) => a.queueAt - b.queueAt || a.id - b.id)) {
+        if (serving >= bar.slots) break;
+        guest.activity = 'drink'; guest.serviceRemaining = 1; serving++;
+      }
+      r.guests = r.guests.filter(guest => guest.activity !== 'leave' || r.elapsed - guest.departedAt < 1.5);
+    }
+    _finishNight() {
+      const r = this._r, ledger = r.ledger.current;
+      this._flushAuto();
+      if (ledger.completedGuests > 0) {
+        const average = ledger.satisfactionTotal / ledger.completedGuests;
+        r.reputation = clamp(r.reputation + (average - r.reputation) * Math.min(0.2, ledger.completedGuests / 100), 0, 100);
+        r.maxReputation = Math.max(r.maxReputation, r.reputation);
+      }
+      r.ledger.last = clone(ledger); r.ledger.current = blankLedger(ledger.night + 1); r.debtProfitBaseline = 0; r.autoPaid = 0;
+    }
+    _step(dt) {
+      const r = this._r, beforeNight = Math.floor(r.elapsed / NIGHT_SECONDS);
+      r.elapsed += dt;
+      if (r.debt) {
+        const result = advanceDebt(r.debt, dt / NIGHT_SECONDS, 0);
+        this._book('interestAccrued', result.interest);
+      }
+      this._book('wages', this._wages() * dt / NIGHT_SECONDS);
+      this._book('maintenance', this._maintenance() * dt / NIGHT_SECONDS);
+      for (let arrivals = 0; r.nextArrival <= r.elapsed + EPS && arrivals < 100; arrivals++) this._arrive();
+      this._guests(dt);
+      if (Math.floor(r.elapsed / NIGHT_SECONDS) > beforeNight) this._finishNight();
+      if (!r.basicMode && r.cash - this._reserve() < -EPS) {
+        r.needsRecovery = true;
+        this._emit('周转资金不足。可切换基础自营，无需追加资金，资产与债务都会保留。');
+      }
+    }
+    tick(seconds) {
+      if (!finite(seconds) || seconds <= 0 || this._r.needsRecovery) return this.state;
+      this._carry += seconds;
+      while (this._carry + EPS >= STEP && !this._r.needsRecovery) { this._step(STEP); this._carry -= STEP; }
+      this._carry = this._r.needsRecovery ? 0 : Math.max(0, this._carry);
+      this._sync(); return this.state;
+    }
+    estimateOffline() {
+      if (this._r.needsRecovery) return { profitPerNight: 0, revenue: 0, ingredients: 0, wages: 0, maintenance: 0, admissions: 0, drinks: 0, stopped: true };
+      const admissions = Math.min(this._demand(), this._capacity() * 2), bar = this._bar();
+      const drinks = Math.min(admissions * 0.6, bar.slots ? bar.slots * NIGHT_SECONDS / bar.seconds : 0);
+      const revenue = admissions * 10 + drinks * 15, ingredients = drinks * 5, wages = this._wages(), maintenance = this._maintenance();
+      return { profitPerNight: Math.max(0, revenue - ingredients - wages - maintenance), operatingProfit: revenue - ingredients - wages - maintenance,
+        revenue, ingredients, wages, maintenance, admissions, drinks, description: '按当前稳定客流与实际设施能力估算，已扣工资、原料和维护；不含贷款偿还。' };
+    }
+    _offlineEfficiency(hours) {
+      if (hours >= 24 - EPS) return 0;
+      const level = this._duty('manager') ? this._r.staff.manager.level : 0;
+      return hours < 2 - EPS ? 0.8 + level * 0.02 : hours < 6 - EPS ? 0.5 + level * 0.03 : hours < 12 - EPS ? 0.2 + level * 0.02 : 0.05 + level * 0.01;
+    }
+    settleOffline(fromMs, toMs) {
+      const empty = { hours: 0, equivalentNights: 0, profit: 0, repaid: 0, interest: 0, cash: 0, profitPerNight: this.estimateOffline().profitPerNight };
+      if (!finite(fromMs) || !finite(toMs) || toMs <= fromMs) return empty;
+      const r = this._r, offline = r.offline, previousCursor = offline.cursor;
+      const start = Math.max(fromMs, previousCursor == null ? fromMs : previousCursor);
+      if (toMs <= start) return empty;
+      if (previousCursor == null || fromMs > previousCursor) offline.chainStart = start;
+      const chainEnd = offline.chainStart + DAY;
+      const history = offline.history.filter(interval => interval[1] > start - DAY).map(interval => interval.slice());
+      if (history.length && history[history.length - 1][1] === start) history[history.length - 1][1] = toMs;
+      else history.push([start, toMs]);
+      const boundaries = [start, Math.min(toMs, chainEnd), toMs];
+      for (const interval of history) for (const edge of interval) if (edge + DAY > start && edge + DAY < toMs) boundaries.push(edge + DAY);
+      boundaries.sort((a, b) => a - b);
+      let equivalentNights = 0;
+      const usedAt = t => history.reduce((sum, interval) => sum + Math.max(0, Math.min(t, interval[1]) - Math.max(t - DAY, interval[0])), 0) / HOUR;
+      for (let i = 0; i < boundaries.length - 1; i++) {
+        let at = Math.max(start, boundaries[i]), end = Math.min(boundaries[i + 1], toMs, chainEnd);
+        if (end <= at) continue;
+        while (at < end - 0.0001) {
+          const used = usedAt(at), oldPoint = at - DAY + 0.001;
+          const slope = history.some(interval => interval[0] <= oldPoint && interval[1] > oldPoint) ? 0 : 1;
+          const nextBand = [2, 6, 12, 24].find(boundary => boundary > used + EPS);
+          const until = slope && nextBand != null ? Math.min(end, at + (nextBand - used) * HOUR) : end;
+          const duration = until - at;
+          if (duration <= 0.00001) break;
+          equivalentNights += duration / HOUR * this._offlineEfficiency(used);
+          at = until;
+        }
+      }
+      offline.cursor = toMs;
+      offline.history = history.filter(interval => interval[1] > toMs - DAY).map(interval => [Math.max(interval[0], toMs - DAY), interval[1]]);
+      const estimate = this.estimateOffline();
+      if (estimate.stopped) equivalentNights = 0;
+      const autoBefore = this._flushAuto();
+      const profit = estimate.profitPerNight * equivalentNights;
+      let repaid = 0, interest = 0;
+      if (r.debt && equivalentNights > 0) {
+        const result = advanceDebt(r.debt, equivalentNights, estimate.profitPerNight * 0.2);
+        repaid = result.repaid; interest = result.interest;
+        if (balance(r.debt) < EPS) r.debt = null;
+      }
+      r.cash += profit - repaid; r.offlineNights += equivalentNights;
+      r.ledger.current.night = Math.floor(r.elapsed / NIGHT_SECONDS) + Math.floor(r.offlineNights + EPS) + 1;
+      const report = { hours: (toMs - start) / HOUR, equivalentNights, profit, repaid, interest, cash: profit - repaid,
+        onlineRepaymentSettled: autoBefore, profitPerNight: estimate.profitPerNight, estimate };
+      for (const key of ['hours', 'equivalentNights', 'profit', 'repaid', 'interest']) r.ledger.offline[key] += report[key];
+      this._sync(); return report;
+    }
+    snapshot() { return { version: 3, engine: 'disco-free', seed: this.seed, carry: this._carry, raw: clone(this._r) }; }
+    restore(snapshot) {
+      try {
+        if (snapshot?.version !== 3 || snapshot.engine !== 'disco-free' || !finite(snapshot.seed) || !finite(snapshot.carry) || snapshot.carry < 0 || snapshot.carry >= STEP + EPS) return false;
+        const r = clone(snapshot.raw);
+        if (!r || !['cash', 'elapsed', 'offlineNights', 'reputation', 'maxReputation', 'debtProfitBaseline', 'autoPaid', 'nextArrival', 'nextGuest', 'nextDecor', 'sequence'].every(key => finite(r[key]))) return false;
+        if (r.cash < -1000000 || r.elapsed < 0 || r.elapsed > 1e10 || r.offlineNights < 0 || r.reputation < 0 || r.reputation > 100 || r.maxReputation < r.reputation || r.maxReputation > 100 || ![1, 2, 3].includes(r.venue) || ![0.5, 1, 2, 5].includes(r.speed)) return false;
+        if (r.nextArrival <= r.elapsed || r.nextArrival > 1e12 || !Number.isSafeInteger(r.nextGuest) || r.nextGuest < 1 || !Number.isSafeInteger(r.nextDecor) || r.nextDecor < 1) return false;
+        if (typeof r.basicMode !== 'boolean' || typeof r.needsRecovery !== 'boolean' || r.autoPaid < 0 || typeof r.lastNotice !== 'string') return false;
+        if (!r.equipment || !Object.keys(this._r.equipment).every(key => Number.isInteger(r.equipment[key]) && r.equipment[key] >= 0 && r.equipment[key] <= (key === 'ball' ? 1 : key === 'dancer' ? 2 : 3))) return false;
+        if (!r.staff || !Object.keys(STAFF).every(role => { const s = r.staff[role]; return s && typeof s.hired === 'boolean' && typeof s.onDuty === 'boolean' && (!s.onDuty || s.hired) && [1, 2, 3].includes(s.level) && finite(s.xp) && s.xp >= 0 && finite(s.work) && s.work >= 0; })) return false;
+        if (r.debt && (!['principal', 'interest', 'original', 'totalInterest', 'rate', 'cap'].every(key => finite(r.debt[key]) && r.debt[key] >= 0) || r.debt.totalInterest > r.debt.cap + EPS || r.debt.interest > r.debt.totalInterest + EPS || r.debt.rate > LOAN.rate)) return false;
+        if (!Array.isArray(r.guests) || r.guests.length > 100 || !r.guests.every(g => Number.isInteger(g.id) && ['dance', 'queue', 'drink', 'rest', 'leave'].includes(g.activity) && ['arrival', 'elapsed', 'stay', 'leaveAt', 'queueAt', 'serviceRemaining', 'restUntil', 'djWork', 'satisfaction', 'lookSeed'].every(key => finite(g[key])) && g.satisfaction >= 0 && g.satisfaction <= 100 && g.leaveAt >= g.arrival)) return false;
+        if (!Array.isArray(r.ownedThemes) || !r.ownedThemes.includes(r.theme) || !r.ownedThemes.every(id => THEMES.some(theme => theme.id === id))) return false;
+        if (!Array.isArray(r.decor) || r.decor.length > 100 || !r.decor.every(d => typeof d.id === 'string' && DECOR.some(item => item.id === d.itemId && item.zones.includes(d.zone)) && Number.isInteger(d.x) && d.x >= 0 && d.x <= 3 && Number.isInteger(d.y) && d.y >= 0 && d.y <= 2 && typeof d.placed === 'boolean')) return false;
+        if (new Set(r.decor.map(d => d.id)).size !== r.decor.length || new Set(r.decor.filter(d => d.placed).map(d => `${d.zone}/${d.x}/${d.y}`)).size !== r.decor.filter(d => d.placed).length) return false;
+        if (!r.ledger || ![r.ledger.current, r.ledger.lifetime, ...(r.ledger.last ? [r.ledger.last] : [])].every(l => l && finite(l.night) && LEDGER_FIELDS.every(key => finite(l[key])))) return false;
+        if (!r.ledger.offline || !['hours', 'equivalentNights', 'profit', 'repaid', 'interest'].every(key => finite(r.ledger.offline[key]) && r.ledger.offline[key] >= 0)) return false;
+        if (!r.offline || (r.offline.cursor !== null && !finite(r.offline.cursor)) || (r.offline.chainStart !== null && !finite(r.offline.chainStart)) || !Array.isArray(r.offline.history) || r.offline.history.length > 3000 || !r.offline.history.every((pair, i, list) => Array.isArray(pair) && pair.length === 2 && pair.every(finite) && pair[1] >= pair[0] && (!i || pair[0] >= list[i - 1][1]))) return false;
+        if (!Array.isArray(r.completedGoals) || !r.completedGoals.every(id => typeof id === 'string')) return false;
+        this._r = r; this.seed = snapshot.seed >>> 0; this._carry = snapshot.carry; this._messages = []; this._sync(); return true;
+      } catch (_) { return false; }
+    }
+    migrateLegacy(snapshot, now = Date.now()) {
+      try {
+        const old = snapshot?.raw;
+        if (snapshot?.version !== 1 || !old || old.mode !== 'free' || !['money', 'loan', 'elapsed', 'people', 'floor'].every(key => finite(old[key])) || old.money < 0 || old.loan < 0 || !old.items || !finite(now)) return false;
+        this.startFree(); const r = this._r;
+        r.cash = old.money / 16384; r.elapsed = Math.max(0, old.elapsed - 1) / 1000 * 6;
+        r.venue = clamp(Math.floor(old.floor) || 1, 1, 3); r.equipment.floor = clamp(Math.floor(old.floor), 0, 3);
+        const oldTier = id => Math.max(0, Math.floor(old.items[id]?.tier) || 0);
+        r.equipment.lights = Math.min(3, Math.ceil(oldTier(1) / 2)); r.equipment.speakers = Math.min(3, Math.ceil(oldTier(31) / 2)); r.equipment.decks = Math.min(3, oldTier(32));
+        r.equipment.ball = Math.min(1, oldTier(4)); r.equipment.dancer = Math.min(2, oldTier(3)); r.legacyAssets = clone(old.items);
+        r.reputation = clamp(finite(old.mood) ? Math.floor(old.mood / 16384) * 100 / 150 : 35, 35, 85); r.maxReputation = r.reputation;
+        if (old.loan > 0) { const outstanding = old.loan / 16384; r.debt = { principal: outstanding, interest: 0, original: outstanding, totalInterest: 0, rate: 0, cap: 0, legacy: true }; }
+        if (r.equipment.ball) r.decor.push({ id: `decor-${r.nextDecor++}`, itemId: 'mirrorBall', zone: 'dance', x: 1, y: 1, placed: true });
+        r.ledger.current = blankLedger(Math.floor(r.elapsed / NIGHT_SECONDS) + 1);
+        r.nextArrival = r.elapsed + 2; r.offline.cursor = now; r.offline.chainStart = now;
+        r.needsRecovery = r.cash <= 0; this._carry = 0;
+        this._emit('旧自由经营已迁移：现金、资产、营业进度与剩余贷款保留；旧贷款不追加新版利息，迁移前时段不补算离线收入。'); this._sync(); return true;
+      } catch (_) { return false; }
+    }
+  }
+  const api = freeze({ Game, CATALOG, STAFF, THEMES, DECOR, LOAN, NIGHT_SECONDS, STEP_SECONDS: STEP });
+  root.DiscoFreeEngine = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
 (function (root) {
   'use strict';
   const KEY = 'disco-club-v2';
   const LEGACY_KEY = 'disco-faithful-v1';
-  const empty = () => ({ version: 2, currentMode: 'free', sessions: { free: null, challenge: null }, unlocked: 1, scores: [0, 0, 0] });
+  const empty = () => ({ version: 3, currentMode: 'free', sessions: { free: null, challenge: null }, unlocked: 1, scores: [0, 0, 0] });
   class ClubSaveStore {
-    constructor(storage, Engine) {
+    constructor(storage, Engine, FreeEngine, { now = Date.now } = {}) {
       this.storage = storage;
       this.Engine = Engine;
+      this.FreeEngine = FreeEngine;
+      this.now = now;
       this.data = empty();
       this.available = true;
       this.migrated = false;
       this.load();
     }
-    validate(snapshot, mode) {
+    validateEntry(snapshot, mode) {
       if (!snapshot || !['free', 'challenge'].includes(mode)) return null;
-      const candidate = new this.Engine.Game();
-      return candidate.restore(snapshot) && candidate.state.mode === mode ? candidate.snapshot() : null;
+      const candidate = new (mode === 'free' && this.FreeEngine ? this.FreeEngine : this.Engine).Game();
+      try {
+        if (candidate.restore(snapshot) && candidate.state.mode === mode) return { snapshot: candidate.snapshot(), migrated: false };
+        if (mode === 'free' && this.FreeEngine && candidate.migrateLegacy) {
+          const result = candidate.migrateLegacy(snapshot, this.now());
+          if (result && result.ok !== false && candidate.state.mode === 'free') return { snapshot: candidate.snapshot(), migrated: true };
+        }
+      } catch (_) { /* Reject an invalid session without losing the other mode. */ }
+      return null;
     }
+    validate(snapshot, mode) { return this.validateEntry(snapshot, mode)?.snapshot || null; }
     load() {
       let source;
       try { source = this.storage?.getItem(KEY); }
@@ -1130,10 +1708,18 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       if (source) {
         try {
           const parsed = JSON.parse(source);
-          if (parsed.version === 2) {
+          if (parsed.version === 2 || parsed.version === 3) {
             for (const mode of ['free', 'challenge']) {
-              const snapshot = this.validate(parsed.sessions?.[mode]?.snapshot, mode);
-              if (snapshot) this.data.sessions[mode] = { snapshot, savedAt: Number(parsed.sessions[mode].savedAt) || 0 };
+              const sourceEntry = parsed.sessions?.[mode];
+              const validated = this.validateEntry(sourceEntry?.snapshot, mode);
+              if (validated) {
+                this.data.sessions[mode] = {
+                  snapshot: validated.snapshot,
+                  savedAt: validated.migrated ? this.now() : Math.max(0, Number(sourceEntry.savedAt) || 0),
+                  offlineEnabled: !validated.migrated && sourceEntry.offlineEnabled !== false
+                };
+                this.migrated = this.migrated || validated.migrated;
+              }
             }
             this.data.currentMode = parsed.currentMode === 'challenge' ? 'challenge' : 'free';
             this.readProgress(parsed);
@@ -1147,7 +1733,7 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
           this.readProgress(old);
           const snapshot = this.validate(old.game, 'challenge');
           if (snapshot) {
-            this.data.sessions.challenge = { snapshot, savedAt: Date.now() };
+            this.data.sessions.challenge = { snapshot, savedAt: this.now(), offlineEnabled: false };
             this.data.currentMode = 'challenge';
             this.migrated = true;
           }
@@ -1159,9 +1745,11 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       this.data.scores = [0, 1, 2].map(i => Math.max(0, Number(value.scores?.[i]) || 0));
     }
     get(mode) { return this.data.sessions[mode]?.snapshot || null; }
-    record(mode, game, { unlocked = this.data.unlocked, scores = this.data.scores } = {}) {
+    session(mode) { return this.data.sessions[mode] || null; }
+    record(mode, game, { unlocked = this.data.unlocked, scores = this.data.scores, now = this.now(), offlineEnabled = true } = {}) {
       if (!['free', 'challenge'].includes(mode) || game.state.mode !== mode) return false;
-      this.data.sessions[mode] = { snapshot: game.snapshot(), savedAt: Date.now() };
+      const savedAt = Math.max(Number(now) || 0, this.data.sessions[mode]?.savedAt || 0);
+      this.data.sessions[mode] = { snapshot: game.snapshot(), savedAt, offlineEnabled: mode === 'free' && offlineEnabled };
       this.data.currentMode = mode;
       this.readProgress({ unlocked, scores });
       try {
@@ -1179,11 +1767,112 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
 
 </script>
 <script>
+(function (root) {
+  'use strict';
+  // Only genuine departures accrue offline time. Open menus still receive a
+  // wall-clock checkpoint, so reading them does not create a second income path.
+  class DiscoSessionClock {
+    constructor(store, { now = Date.now, locks = root.navigator?.locks } = {}) {
+      this.store = store;
+      this.now = now;
+      this.locks = locks;
+      this.away = null;
+      this.writable = true;
+      this.lockRequested = false;
+      this.lockRelease = null;
+    }
+    async acquire() {
+      if (this.lockRequested) return this.writable;
+      this.lockRequested = true;
+      if (!this.locks?.request) return true;
+      this.writable = false;
+      return new Promise(resolve => {
+        this.locks.request('disco-club-v2-play', { ifAvailable: true }, async lock => {
+          this.writable = Boolean(lock);
+          resolve(this.writable);
+          if (!lock) return;
+          await new Promise(release => { this.lockRelease = release; });
+          this.writable = false;
+        }).catch(() => resolve(false));
+      });
+    }
+    release() {
+      this.lockRelease?.();
+      this.lockRelease = null;
+      this.lockRequested = false;
+      this.writable = false;
+    }
+    record(mode, game, options = {}) {
+      if (!this.writable || this.away) return false;
+      return this.store.record(mode, game, { ...options, now: options.now ?? this.now() });
+    }
+    settle(mode, game, entry, now) {
+      if (!this.writable) return null;
+      let report = null;
+      if (mode === 'free' && entry?.offlineEnabled && entry.savedAt > 0 && now > entry.savedAt && typeof game.settleOffline === 'function') {
+        report = game.settleOffline(entry.savedAt, now);
+      }
+      // Persist the cursor and credited cash together, before displaying either.
+      this.store.record(mode, game, { now, offlineEnabled: mode === 'free' && entry?.offlineEnabled !== false });
+      if (!report || !(report.hours > 0 || report.equivalentNights > 0)) return null;
+      return report;
+    }
+    resume(mode, game, now = this.now()) {
+      const entry = this.store.session(mode);
+      this.away = null;
+      return this.settle(mode, game, entry, now);
+    }
+    suspend(mode, game, options = {}) {
+      if (!this.writable || this.away) return false;
+      const now = options.now ?? this.now();
+      this.store.record(mode, game, { ...options, now });
+      // visibilitychange and pagehide describe the same departure. Save once.
+      this.away = { mode, ...this.store.session(mode) };
+      return true;
+    }
+    foreground(mode, game, now = this.now()) {
+      const entry = this.away;
+      if (!entry || entry.mode !== mode) return null;
+      this.away = null;
+      return this.settle(mode, game, entry, now);
+    }
+  }
+  root.DiscoSessionClock = DiscoSessionClock;
+  if (typeof module !== 'undefined' && module.exports) module.exports = DiscoSessionClock;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
 /* Original vector art for the upgraded DISCO preview. No external assets. */
 (function (root) {
   'use strict';
   const TAU = Math.PI * 2;
   const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+  // All decoration coordinates are local to one fixed 4 × 3 functional zone.
+  // The simulation owns occupancy; these rectangles only project it into the scene.
+  const ZONES = {
+    dance: { u: 1.95, v: 2.55, w: 4.8, d: 4.25, label: '舞池' },
+    bar: { u: 4.3, v: 1.08, w: 2.8, d: 1.18, label: '吧台' },
+    lounge: { u: .12, v: 3.45, w: 1.8, d: 3.35, label: '休息区' }
+  };
+  const NEON = {
+    bg: ['#151726', '#1a1a2c', '#111522'], wall: ['#34304b', '#252c43'],
+    trim: '#9b85d0', accent: '#91cfc7', border: '#8294b3',
+    plain: ['#30364b', '#343b50'], tile: ['#42627c', '#586e96', '#665f8c', '#537f8d'],
+    sofa: ['#9c819d', '#8b7396'], bar: ['#9c7d8f', '#564969', '#3d3854']
+  };
+  const WARM = {
+    bg: ['#221d26', '#29212b', '#141a22'], wall: ['#674a4d', '#384953'],
+    trim: '#e9b58b', accent: '#e3c496', border: '#bca485',
+    plain: ['#4b4448', '#51484b'], tile: ['#856465', '#b08075', '#8e8b7a', '#5d8586'],
+    sofa: ['#bf8a7c', '#a97972'], bar: ['#ba9476', '#796052', '#584945']
+  };
+  const ELECTRIC = {
+    ...NEON, bg: ['#111b2c', '#201a34', '#101a29'], wall: ['#3b315f', '#244455'],
+    trim: '#a3e8e2', accent: '#e1a5e5', plain: ['#303850', '#344159'],
+    tile: ['#476e96', '#7173ac', '#735d99', '#489390'],
+    sofa: ['#989ed0', '#747ca9'], bar: ['#90a5b7', '#4a6981', '#354759']
+  };
   const PALETTES = [
     ['#e68c9a', '#402d4b', '#edbb9b', '#2b2440'],
     ['#70c6c7', '#223d51', '#bd8465', '#261d2b'],
@@ -1218,6 +1907,10 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       this.ty = 0;
       this.hotspots = [];
       this.lastTime = 0;
+      this.roomScale = 1;
+      this.theme = NEON;
+      this.guestViews = new Map();
+      this.lastCrowdTime = 0;
       this.resize();
     }
 
@@ -1248,7 +1941,17 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       this.canvas.dataset.renderScale = String(Math.round(this.scale * dpr * 100) / 100);
     }
 
-    iso(u, v, z = 0) { return [500 + (u - v) * 58, this.originY + (u + v) * this.depth - z]; }
+    iso(u, v, z = 0) {
+      const size = this.roomScale;
+      return [500 + (u - v) * 58 * size, this.originY + (1 - size) * 7.5 * this.depth + (u + v) * this.depth * size - z];
+    }
+
+    cellPosition(zone, x, y) {
+      const r = ZONES[zone];
+      if (!r) return null;
+      return [r.u + (clamp(Number(x) || 0, 0, 3) + .5) * r.w / 4,
+        r.v + (clamp(Number(y) || 0, 0, 2) + .5) * r.d / 3];
+    }
 
     world(c) {
       c.setTransform(this.dpr * this.scale, 0, 0, this.dpr * this.scale, this.tx * this.dpr, this.ty * this.dpr);
@@ -1368,8 +2071,8 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       this.speaker(c,3.02,.15,e.speakers||0);
     }
 
-    bar(c) {
-      this.prism(c,4.35,.18,2.72,.82,60,'#9c7d8f','#564969','#3d3854');
+    bar(c, level = 1) {
+      this.prism(c,4.35,.18,2.72,.82,60,...this.theme.bar);
       const a=this.iso(4.5,.94,35), b=this.iso(6.95,.94,35);
       this.line(c,[a,b],'#b6a0aa',2);
       for(let k=0;k<8;k++) {
@@ -1388,19 +2091,25 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
         this.ellipse(c,x,y-2,13,5,'#394257');
         this.line(c,[[x,y-3],[x,y-29]],'#8e8c9f',5);
         this.ellipse(c,x,y-13,12,5,null,'#777c91',2);
-        this.ellipse(c,x,y-31,19,10,'#a35f86');
-        this.ellipse(c,x,y-34,19,9,'#c68aa7');
+        this.ellipse(c,x,y-31,19,10,this.freeScene ? this.theme.sofa[1] : '#a35f86');
+        this.ellipse(c,x,y-34,19,9,this.freeScene ? this.theme.sofa[0] : '#c68aa7');
         this.line(c,[[x-11,y-36],[x+3,y-39]],'#dca2bc',1.5);
+      }
+      if(level > 1) {
+        const [x,y] = this.iso(4.63,.53,63);
+        this.rounded(c,x-15,y-23,30,24,4,'#c3c3c7','#585e71');
+        this.rounded(c,x-11,y-19,22,11,2,'#3d5261');
+        this.line(c,[[x-7,y-5],[x+7,y-5]],this.theme.accent,2);
       }
     }
 
-    lounge(c) {
+    lounge(c, level = 1) {
       // Small left-wall banquette, kept outside the guest positions.
       this.prism(c,.18,4.1,.65,2.15,23,'#806b94','#59496f','#443e5a');
       this.prism(c,.05,4.05,.19,2.25,57,'#79628c','#5d4c70','#4d415c');
       for(let k=0;k<3;k++) {
         const u=.25,v=4.15+k*.69;
-        this.prism(c,u,v,.54,.63,25,k%2?'#9c819d':'#8b7396','#67516f','#594566');
+        this.prism(c,u,v,.54,.63,25,this.theme.sofa[1-k%2],'#67516f','#594566');
       }
       const [x,y]=this.iso(1.18,5.25);
       this.line(c,[[x,y],[x,y-30]],'#766d88',5);
@@ -1409,23 +2118,46 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       this.line(c,[[x-6,y-34],[x-6,y-43]],'#c6a1b1',3);
       this.plant(c,.45,6.85,true);
       this.plant(c,7,.35,true);
+      if(level > 1) {
+        const [lx,ly] = this.iso(.38,3.6);
+        this.line(c,[[lx,ly],[lx,ly-72]],'#a99c91',3);
+        this.polygon(c,[[lx-10,ly-80],[lx+10,ly-80],[lx+18,ly-60],[lx-18,ly-60]],this.theme.accent);
+        this.ellipse(c,lx,ly-60,18,5,'#f2dcb8');
+      }
     }
 
-    buildStatic(e,key) {
+    zoneMarker(c, zone, text, locked = false) {
+      const r = ZONES[zone];
+      const at = zone === 'bar' ? [5.7, .65] : [.67, 5.25];
+      if(locked) {
+        const points=[[r.u,r.v],[r.u+r.w,r.v],[r.u+r.w,r.v+r.d],[r.u,r.v+r.d]].map(p=>this.iso(...p));
+        c.save();c.setLineDash([7,7]);
+        this.polygon(c,points,'rgba(18,26,39,.28)','#8495a3',1.6);c.restore();
+        const [x,y]=this.iso(...at);
+        this.rounded(c,x-38,y-29,76,32,8,'#30394a','#697988');
+        // The action name is in the DOM menu; use a crisp symbol at phone scale.
+        this.line(c,[[x-8,y-13],[x+8,y-13]],'#c8d2dd',3);
+        this.line(c,[[x,y-21],[x,y-5]],'#c8d2dd',3);
+      }
+      const [x,y]=this.iso(...at,locked?14:36);
+      this.hotspots.unshift({kind:zone,x,y,rx:zone==='bar'?105:55,ry:zone==='bar'?58:82});
+    }
+
+    buildStatic(e,key,state={}) {
       const c=this.cache.getContext('2d',{alpha:false});
       c.setTransform(1,0,0,1,0,0);
       const bg=c.createLinearGradient(0,0,this.cache.width,this.cache.height);
-      bg.addColorStop(0,'#151726');bg.addColorStop(.55,'#1a1a2c');bg.addColorStop(1,'#111522');
+      bg.addColorStop(0,this.theme.bg[0]);bg.addColorStop(.55,this.theme.bg[1]);bg.addColorStop(1,this.theme.bg[2]);
       c.fillStyle=bg;c.fillRect(0,0,this.cache.width,this.cache.height);
       this.world(c);
       this.hotspots=[];
       const corners=[[0,0],[7.5,0],[7.5,7.5],[0,7.5]].map(p=>this.iso(...p));
       const [a,b,f,d]=corners, h=this.wallHeight;
       // The raised plinth gives the room a coherent miniature-set silhouette.
-      this.ellipse(c,500,f[1]-36,417,82,'rgba(3,7,16,.27)');
+      this.ellipse(c,500,f[1]-36,417*this.roomScale,82*this.roomScale,'rgba(3,7,16,.27)');
       this.polygon(c,[[d[0],d[1]+22],[f[0],f[1]+34],[b[0],b[1]+22],b,a,d],'#101725');
-      this.polygon(c,[a,d,[d[0],d[1]-h],[a[0],a[1]-h]],'#34304b');
-      this.polygon(c,[a,b,[b[0],b[1]-h],[a[0],a[1]-h]],'#252c43');
+      this.polygon(c,[a,d,[d[0],d[1]-h],[a[0],a[1]-h]],this.theme.wall[0]);
+      this.polygon(c,[a,b,[b[0],b[1]-h],[a[0],a[1]-h]],this.theme.wall[1]);
       for(let i=1;i<8;i++) {
         let p=this.iso(0,i); this.line(c,[p,[p[0],p[1]-h]],'#41394f',1.5);
         p=this.iso(i,0); this.line(c,[p,[p[0],p[1]-h]],'#323a50',1.5);
@@ -1433,7 +2165,7 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       // Two-layer crown lighting is cached, including its soft halo.
       const strip=[[d[0],d[1]-h+10],[a[0],a[1]-h+10],[b[0],b[1]-h+10]];
       c.save();c.shadowColor='#8d7bcb';c.shadowBlur=14;
-      this.line(c,strip,e.lights>2?'#bca6ee':'#8e7cb9',4);c.restore();
+      this.line(c,strip,this.freeScene?this.theme.trim:e.lights>2?'#bca6ee':'#8e7cb9',4);c.restore();
       this.line(c,strip.map(([x,y])=>[x,y+7]),'#504461',3);
       this.line(c,[[a[0],a[1]-h],[a[0],a[1]]],'#464057',3);
       // Left wall inset arches, with a satin rather than shiny surface.
@@ -1458,7 +2190,7 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       for(let u=0;u<7.5;u+=.75)for(let v=0;v<7.5;v+=.75) {
         const dance=u>=1.5&&u<6.75&&v>=2.25&&v<6.75;
         const idx=(Math.round(u/.75)+Math.round(v/.75)*2)%4;
-        this.floorTile(c,u,v,.75,dance?floorColors[idx]:((Math.round((u+v)/.75)%2)?'#30364b':'#343b50'),'rgba(13,24,40,.32)');
+        this.floorTile(c,u,v,.75,dance?(this.theme!==NEON?this.theme.tile[idx]:floorColors[idx]):this.theme.plain[1-Math.round((u+v)/.75)%2],'rgba(13,24,40,.32)');
       }
       const edging=[[1.5,2.25],[6.75,2.25],[6.75,6.75],[1.5,6.75]].map(p=>this.iso(...p));
       this.polygon(c,edging,null,e.floor?'#9db7c0':'#65788e',2);
@@ -1466,9 +2198,22 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       this.polygon(c,[b,f,[f[0],f[1]+15],[b[0],b[1]+15]],'#282f45');
       this.line(c,[d,f,b],'#7b819e',2);
       this.line(c,[[d[0],d[1]+17],[f[0],f[1]+28],[b[0],b[1]+17]],'#222a3f',4);
-      this.lounge(c);
+      if(!this.freeScene || e.lounge) {
+        c.save();if(state.basicMode)c.globalAlpha=.48;this.lounge(c,e.lounge||1);c.restore();
+      }
       this.booth(c,e);
-      this.bar(c);
+      if(!this.freeScene || e.bar) {
+        c.save();if(state.basicMode)c.globalAlpha=.48;this.bar(c,e.bar||1);c.restore();
+      }
+      if(this.freeScene) {
+        this.zoneMarker(c,'bar',e.bar?'吧台':'添置吧台',!e.bar);
+        this.zoneMarker(c,'lounge',e.lounge?'休息区':'休息区',!e.lounge);
+        const [vx,vy]=this.iso(7.25,6.6,5);
+        this.hotspots.unshift({kind:'venue',x:vx,y:vy,rx:56,ry:36});
+        for(let i=0;i<clamp(state.venue||1,1,3);i++) {
+          this.ellipse(c,vx-10+i*12,vy,3.5,3.5,this.theme.accent);
+        }
+      }
       this.lamps=[this.wallLamp(c,0,2,'left'),this.wallLamp(c,6.7,0,'right')];
       const lampP=this.lamps[0];this.hotspots.push({kind:'lights',x:lampP[0],y:lampP[1],rx:55,ry:48});
       const floorCenter=this.iso(4.2,4.5);this.hotspots.push({kind:'floor',x:floorCenter[0],y:floorCenter[1],rx:205,ry:130});
@@ -1487,19 +2232,20 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
     limbs(c,points,color,width) { this.line(c,points,'#192335',width+2);this.line(c,points,color,width); }
 
     person(c,u,v,index,time,energy=1,role='guest') {
-      const [x,ground]=this.iso(u,v,role==='dj'?13:role==='dancer'?24:0);
+      const [x,ground]=this.iso(u,v,role==='dj'||role==='bartender'?13:role==='dancer'?24:0);
       const p=PALETTES[index%PALETTES.length],phase=index*1.71;
       const beat=time*(role==='dj'?2.8:3.2)+phase;
       const bounce=(1+Math.sin(beat))*1.9*energy;
       const sway=Math.sin(beat*.5)*3.5*energy;
-      const y=ground-bounce;
-      const skin=p[2],hair=p[3],top=role==='dj'?'#dbc29a':p[0],pants=p[1];
+      const y=ground-bounce+(role==='rest'?7:0);
+      const service=['bartender','server','manager'].includes(role);
+      const skin=p[2],hair=p[3],top=role==='dj'?'#dbc29a':service?'#91c8c2':p[0],pants=p[1];
       const female=index%3===0, jacket=index%4===1;
       this.ellipse(c,x,ground+1,19,7,'rgba(7,18,31,.3)');
       c.save();c.translate(x,y);
       const step=Math.sin(beat)*4.8*energy;
       this.limbs(c,[[-5,-24],[-7-step*.4,-13],[-10-step,0]],pants,7);
-      this.limbs(c,[[5,-24],[8+step*.4,-13],[11+step,0]],pants,7);
+      this.limbs(c,[[5,-24],[role==='rest'?17:8+step*.4,-13],[role==='rest'?18:11+step,0]],pants,7);
       this.rounded(c,-15-step,-2,12,6,2.5,'#d0cfda');
       this.rounded(c,7+step,-2,12,6,2.5,'#e4d7db');
       if(female) this.polygon(c,[[-10+sway,-32],[10+sway,-32],[14,-19],[-13,-19]],top);
@@ -1508,9 +2254,27 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       c.lineTo(10,-26);c.quadraticCurveTo(0,-22,-10,-26);c.closePath();c.fillStyle=top;c.fill();
       this.line(c,[[-10+sway,-45],[-8,-29]],'rgba(255,255,255,.18)',2);
       if(jacket){this.polygon(c,[[-11+sway,-48],[-3+sway,-48],[-2,-26],[-10,-27]],'#4b6775');this.polygon(c,[[5+sway,-48],[12+sway,-46],[10,-27],[5,-26]],'#435c69');}
+      if(service) {
+        this.polygon(c,[[-7,-43],[7,-43],[10,-24],[-9,-24]],role==='manager'?'#3c5365':'#e2d8c1');
+        this.line(c,[[-6,-35],[6,-35]],'#a4a38e',1.3);
+      }
       if(role==='dj') {
         this.limbs(c,[[-11+sway,-45],[-18,-36],[-24,-38]],skin,5.5);
         this.limbs(c,[[11+sway,-45],[21,-34],[26,-37]],skin,5.5);
+      } else if(role!=='guest' && role!=='dancer') {
+        this.limbs(c,[[-11+sway,-45],[-17,-35],[-16,-24]],skin,5.3);
+        this.limbs(c,[[11+sway,-45],[19,-37],[role==='queue'?18:24,role==='queue'?-25:-38]],skin,5.3);
+        if(role==='drink'||role==='bartender') {
+          this.rounded(c,20,-49,9,13,2,'#c5e5e6','#87aab5');
+          this.rounded(c,22,-43,5,6,1,role==='drink'?'#e9b984':'#cf9baa');
+          this.line(c,[[26,-49],[28,-54]],'#e5d4c0',1.5);
+        } else if(role==='server') {
+          this.ellipse(c,25,-39,15,5,'#b2c9c7','#566a7e');
+          this.rounded(c,22,-52,7,11,2,'#e5c29c');
+        } else if(role==='manager') {
+          this.rounded(c,18,-48,14,19,2,'#efddb4','#8c8476');
+          this.line(c,[[21,-43],[28,-43]],'#78908c',1.3);
+        }
       } else {
         const lift=Math.sin(beat*.5+index)*10*energy;
         const armUp=index%2===0;
@@ -1582,31 +2346,147 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       c.restore();this.ellipse(c,x-8,y-9,4.5,4.5,'rgba(255,255,255,.72)');
     }
 
+    decoration(c,item,u,v) {
+      const [x,y]=this.iso(u,v);
+      const kind=String(item.itemId||item.type||'plant');
+      if(kind==='plant') { this.plant(c,u,v); return; }
+      if(kind==='sofa') {
+        this.prism(c,u-.27,v-.15,.54,.3,18,this.theme.sofa[0],'#72576b','#524659');
+        this.prism(c,u-.27,v-.22,.54,.09,39,this.theme.sofa[1],'#72576b','#524659');
+        this.prism(c,u-.3,v-.19,.08,.4,27,this.theme.sofa[0],'#72576b','#524659');
+        this.prism(c,u+.23,v-.19,.08,.4,27,this.theme.sofa[0],'#72576b','#524659');
+        return;
+      }
+      if(kind==='mirrorBall') {
+        this.ellipse(c,x,y,16,6,'rgba(9,17,28,.3)');
+        this.line(c,[[x,y],[x,y-47]],'#8795ad',3);
+        this.ellipse(c,x,y-57,14,14,'#b3c2d7','#687b9d',1.4);
+        for(let j=-1;j<=1;j++)for(let k=-1;k<=1;k++) {
+          c.fillStyle=(j+k)%2?'#d8e9eb':'#7e99b8';c.fillRect(x+k*7-2.5,y-59+j*7,5,5);
+        }
+        this.line(c,[[x-6,y-74],[x-6,y-81]],'#e7eee8',1.5);
+        this.line(c,[[x-9.5,y-77.5],[x-2.5,y-77.5]],'#e7eee8',1.5);
+        return;
+      }
+      // A freestanding sign remains movable in every supported zone.
+      this.line(c,[[x-14,y],[x-10,y-45]],'#565e77',3);
+      this.line(c,[[x+14,y],[x+10,y-45]],'#565e77',3);
+      this.rounded(c,x-25,y-61,50,37,6,'#252a43',this.theme.trim);
+      this.line(c,[[x-8,y-37],[x-8,y-51],[x+9,y-55],[x+9,y-41]],'#cf9bd6',2.5);
+      this.ellipse(c,x-12,y-36,5,3,'#a8e5dc');
+      this.ellipse(c,x+5,y-40,5,3,'#a8e5dc');
+    }
+
+    editGrid(c,zone,selected) {
+      const r=ZONES[zone];if(!r)return;
+      for(let y=0;y<3;y++)for(let x=0;x<4;x++) {
+        const u=r.u+x*r.w/4,v=r.v+y*r.d/3;
+        const pts=[[u,v],[u+r.w/4,v],[u+r.w/4,v+r.d/3],[u,v+r.d/3]].map(p=>this.iso(...p));
+        const active=selected?.zone===zone&&selected?.x===x&&selected?.y===y;
+        this.polygon(c,pts,active?'rgba(239,210,154,.32)':'rgba(123,214,203,.1)',active?'#f2d9aa':'rgba(174,224,218,.65)',active?3:1.2);
+      }
+    }
+
+    guestTarget(guest,index,order,decor) {
+      const activity=guest.activity||'dance';
+      if(activity==='queue')return [6.88,2.26+Math.min(order,9)*.36];
+      if(activity==='drink')return [4.75+(order%3)*.82,1.5+Math.min(2,Math.floor(order/3))*.36];
+      if(activity==='rest')return [.7+(order%2)*.38,4.25+Math.min(3,Math.floor(order/2))*.58];
+      if(activity==='leave')return [7.12,7.13];
+      let [u,v]=POSITIONS[index%POSITIONS.length];
+      // Decorations do not alter simulation capacity; avoid drawing feet through a pot.
+      for(const item of decor) {
+        if(item.zone!=='dance')continue;
+        const at=this.cellPosition(item.zone,item.x,item.y);
+        if(Math.hypot(u-at[0],v-at[1])<.5) {
+          u=clamp(u+(u>at[0]?.42:-.42),1.8,6.8);
+          v=clamp(v+.27,2.6,6.9);
+        }
+      }
+      return [u,v];
+    }
+
+    liveCrowd(state,time,options,decor) {
+      const guests=Array.isArray(state.guests)?state.guests:[];
+      const visible=guests.slice(0,POSITIONS.length);
+      const ids=new Set(visible.map(g=>String(g.id)));
+      for(const id of this.guestViews.keys())if(!ids.has(id))this.guestViews.delete(id);
+      const dt=options.paused||options.reducedMotion?0:clamp(time-this.lastCrowdTime,0,.2);
+      this.lastCrowdTime=time;
+      const orders={};
+      return visible.map((g,i)=>{
+        const activity=g.activity||'dance',order=orders[activity]||0;orders[activity]=order+1;
+        const target=this.guestTarget(g,i,order,decor),id=String(g.id);
+        let view=this.guestViews.get(id);
+        if(!view) {
+          // Restored customers already inside the club should not all re-enter
+          // from the door when the player opens a menu immediately after loading.
+          const alreadyInside=options.reducedMotion||Number(g.elapsed)>2;
+          view={u:alreadyInside?target[0]:7.12,v:alreadyInside?target[1]:7.13};
+          this.guestViews.set(id,view);
+        }
+        const dx=target[0]-view.u,dv=target[1]-view.v,length=Math.hypot(dx,dv);
+        const fraction=options.reducedMotion?1:length?Math.min(1,dt*3.4/length):1;
+        view.u+=dx*fraction;view.v+=dv*fraction;
+        const moving=Math.hypot(target[0]-view.u,target[1]-view.v)>.16;
+        const seed=Number.isFinite(g.lookSeed)?Math.abs(Math.floor(g.lookSeed)):Array.from(id).reduce((n,ch)=>n+ch.charCodeAt(0),0);
+        return {u:view.u,v:view.v,i:seed,activity,role:moving?'walk':activity==='dance'?'guest':activity,energy:moving?.42:activity==='dance'?.85:activity==='rest'?.07:.12};
+      });
+    }
+
+    servicePeople(c,state,time) {
+      const staff=state.staff||{},working=role=>!state.basicMode&&staff[role]?.hired&&staff[role]?.onDuty;
+      if(state.equipment?.bar&&working('bartender')) {
+        this.person(c,5.73,.38,5,time,.16,'bartender');
+        // Repaint the counter over the operator, hiding the body below its top.
+        this.bar(c,state.equipment.bar);
+      }
+      const people=[];
+      if(state.equipment?.lounge&&working('server'))people.push({u:1.35,v:3.75,i:1,role:'server',energy:.12});
+      if(working('manager'))people.push({u:7.05,v:5.9,i:4,role:'manager',energy:.06});
+      this.canvas.dataset.serviceStaff=['dj','bartender','server','manager'].filter(working).join(',');
+      return people;
+    }
+
     draw(state,time,options={}) {
       this.resize();
       const preview=!!options.preview;
       const e=preview?{lights:2,floor:2,ball:1,speakers:2,decks:2,dancer:0}:({...state?.equipment});
+      this.freeScene=!preview&&state?.mode==='free'&&Number.isFinite(state?.venue);
+      const venue=this.freeScene?clamp(state.venue,1,3):3;
+      this.roomScale=this.freeScene?[.8,.9,1][venue-1]:1;
+      this.theme=this.freeScene&&state.theme==='tropical'?WARM:this.freeScene&&state.theme==='neon'?ELECTRIC:NEON;
       const t=options.reducedMotion?0:options.paused?this.lastTime:Number.isFinite(time)?time:0;
       this.lastTime=t;
-      const key=[this.width,this.height,this.dpr,...['lights','floor','ball','speakers','decks','dancer'].map(k=>e[k]||0)].join(':');
-      if(this.cacheKey!==key)this.buildStatic(e,key);
+      const key=[this.width,this.height,this.dpr,this.freeScene,venue,this.freeScene?state.theme:'classic',!!state?.basicMode,...['lights','floor','ball','speakers','decks','dancer','bar','lounge'].map(k=>e[k]||0)].join(':');
+      if(this.cacheKey!==key)this.buildStatic(e,key,state);
       const c=this.ctx;c.setTransform(1,0,0,1,0,0);c.globalAlpha=1;c.drawImage(this.cache,0,0);
       this.world(c);
       this.rays(c,e,t,!!state?.happyHour);
-      const active=preview||state?.host?.active;
+      const active=preview||(this.freeScene?(!state.basicMode&&state.staff?.dj?.hired&&state.staff.dj.onDuty):state?.host?.active);
       // A house operator remains behind the desk; hiring a DJ adds energy.
-      this.person(c,1.5,.79,3,t,active?1:.18,'dj');
+      this.person(c,1.5,.79,3,t,active?1:.18,this.freeScene&&!active?'operator':'dj');
       // The counter front masks the operator's feet naturally.
       this.boothFront(c,e);
       this.discoBall(c,e,t);
       if(e.dancer)this.person(c,3.31,1.79,6,t,options.reducedMotion?0:1.25,'dancer');
       const visitors=preview?12:Math.max(0,Number(state?.visitors)||0);
-      const crowd=Math.min(POSITIONS.length,Math.floor(visitors));
       const energy=options.reducedMotion?0:state?.happyHour?1.35:active?1:.62;
-      const people=POSITIONS.slice(0,crowd).map(([u,v],i)=>({u,v,i}));
-      people.sort((a,b)=>(a.u+a.v)-(b.u+b.v));
-      people.forEach(({u,v,i})=>this.person(c,u,v,i,t,energy));
-      this.canvas.dataset.renderedCrowd=String(crowd);
+      const decor=this.freeScene&&Array.isArray(state.decor)?state.decor.filter(item=>item.placed&&ZONES[item.zone]):[];
+      const people=this.freeScene?this.liveCrowd(state,t,options,decor):POSITIONS.slice(0,Math.min(POSITIONS.length,Math.floor(visitors))).map(([u,v],i)=>({u,v,i,role:'guest',energy}));
+      if(options.editZone)this.editGrid(c,options.editZone,options.selectedDecor);
+      const service=this.freeScene?this.servicePeople(c,state,t):[];
+      const decorations=decor.map(item=>{const [u,v]=this.cellPosition(item.zone,item.x,item.y);return {u,v,item};});
+      [...people,...service,...decorations].sort((a,b)=>(a.u+a.v)-(b.u+b.v)).forEach(item=>{
+        if(item.item)this.decoration(c,item.item,item.u,item.v);
+        else this.person(c,item.u,item.v,item.i,t,options.reducedMotion?0:item.energy,item.role);
+      });
+      this.canvas.dataset.renderedCrowd=String(people.length);
+      this.canvas.dataset.renderedDecor=String(decor.length);
+      this.canvas.dataset.venue=String(this.freeScene?venue:0);
+      this.canvas.dataset.theme=this.freeScene?String(state.theme||'classic'):'classic';
+      this.canvas.dataset.renderedActivities=JSON.stringify(people.reduce((counts,p)=>{const a=p.activity||'dance';counts[a]=(counts[a]||0)+1;return counts;},{}));
+      if(!this.freeScene)this.canvas.dataset.serviceStaff='';
       this.canvas.dataset.renderStyle='cartoon';
     }
 
@@ -1625,9 +2505,22 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       return null;
     }
 
-    destroy() { this.cache.width=1;this.cache.height=1;this.hotspots=[]; }
+    pickCell(clientX,clientY,zone) {
+      const area=ZONES[zone];if(!area)return null;
+      const r=this.canvas.getBoundingClientRect();
+      if(clientX<r.left||clientX>r.right||clientY<r.top||clientY>r.bottom)return null;
+      const x=(clientX-r.left-this.tx)/this.scale,y=(clientY-r.top-this.ty)/this.scale;
+      const a=(x-500)/(58*this.roomScale);
+      const b=(y-this.originY-(1-this.roomScale)*7.5*this.depth)/(this.depth*this.roomScale);
+      const u=(a+b)/2,v=(b-a)/2;
+      if(u<area.u||u>=area.u+area.w||v<area.v||v>=area.v+area.d)return null;
+      return {x:Math.floor((u-area.u)/area.w*4),y:Math.floor((v-area.v)/area.d*3)};
+    }
+
+    destroy() { this.cache.width=1;this.cache.height=1;this.hotspots=[];this.guestViews.clear(); }
   }
   root.DiscoClubRenderer=DiscoClubRenderer;
+  if(typeof module!=='undefined'&&module.exports)module.exports=DiscoClubRenderer;
 })(globalThis);
 
 </script>
@@ -1641,8 +2534,10 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   const audio = typeof DiscoAudio === 'function' ? new DiscoAudio() : null;
   let storage = null;
   try { storage = window.localStorage; } catch (_) { /* Private storage may be unavailable. */ }
-  const store = new DiscoClubSaveStore(storage, DiscoEngine);
-  const game = new DiscoEngine.Game();
+  const store = new DiscoClubSaveStore(storage, DiscoEngine, DiscoFreeEngine);
+  const clock = new DiscoSessionClock(store);
+  let game = new DiscoEngine.Game();
+  let canWrite = false;
   let currentMode = store.data.currentMode;
   let hasGame = false;
   let screen = 'welcome';
@@ -1653,12 +2548,13 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   let lastDay = 0, lastEvent = null, terminalShown = '';
   let offlineReady = false;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)');
-  const names = { lights: '灯光', floor: '舞池', ball: '迪斯科球', dancer: '驻场舞者', speakers: '音响', decks: 'DJ 台', host: '驻场 DJ', advertising: '宣传推广' };
-  const icons = { lights: '✦', floor: '▧', ball: '◉', dancer: '♬', speakers: '◖', decks: '◎', host: '♫', advertising: '↗', loan: '$', stats: '≋' };
+  const names = { lights: '灯光', floor: '舞池', ball: '迪斯科球', dancer: '驻场舞者', speakers: '音响', decks: 'DJ 台', host: '驻场 DJ', advertising: '宣传推广', venue: '场地扩建', bar: '吧台', lounge: '休息区' };
+  const icons = { lights: '✦', floor: '▧', ball: '◉', dancer: '♬', speakers: '◖', decks: '◎', host: '♫', advertising: '↗', loan: '$', stats: '≋', venue: '⌂', bar: '♧', lounge: '▱' };
+  const zones = { dance: '舞池区', bar: '吧台区', lounge: '休息区' };
   const descriptions = {
     lights: '让灯光跟着音乐流动', floor: '升级舞池，容纳更多客人', ball: '把星光洒进每一个角落',
     dancer: '让全场更快进入状态', speakers: '给舞厅更好的声音', decks: '为更出色的 DJ 做好准备',
-    host: '邀请 DJ，让今晚热起来', advertising: '让更多人听说你的舞厅'
+    host: '邀请 DJ，让今晚热起来', advertising: '让更多人听说你的舞厅', venue: '扩大舞厅，解锁新设施', bar: '升级出杯速度，服务更多订单', lounge: '让客人舒适地休息'
   };
   const previewState = { ...game.state, visitors: 9, happiness: 76, equipment: { lights: 2, floor: 1, ball: 1, dancer: 0, speakers: 1, decks: 1 }, host: { active: true }, happyHour: false };
 
@@ -1670,7 +2566,10 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   }
   function put(id, value) { const el = $(id); if (el && el.textContent !== String(value)) el.textContent = value; }
   function say(text) { put('notice', text); }
-  function format(value) { return Math.floor(value).toLocaleString('en-US'); }
+  function format(value) { return Math.floor(Number(value) || 0).toLocaleString('en-US'); }
+  function money(value) { return '$' + (Number(value) || 0).toLocaleString('en-US', { maximumFractionDigits: 2 }); }
+  function isFree() { return currentMode === 'free'; }
+  function offlineEnabled() { return isFree() && screen === 'game' && !paused && !game.state.needsRecovery && game.state.status === 'playing'; }
   function refreshWelcome() {
     const mode = store.get(currentMode) ? currentMode : store.get('free') ? 'free' : 'challenge';
     const exists = Boolean(store.get(mode));
@@ -1679,8 +2578,8 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
     $('continue-button').dataset.mode = mode;
   }
   function save() {
-    if (!hasGame) return;
-    const ok = store.record(currentMode, game);
+    if (!hasGame || !canWrite || !visible) return;
+    const ok = clock.record(currentMode, game, { offlineEnabled: offlineEnabled() });
     put('save-label', ok ? '进度已保存' : '当前浏览器无法保存');
     saveAge = 0;
     refreshWelcome();
@@ -1745,18 +2644,26 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
     else if (game.state.status !== 'playing') showResult();
   }
   function resumeMode(mode) {
+    if (!canWrite) return false;
     if (hasGame) save();
     const snapshot = store.get(mode);
-    if (snapshot && game.restore(snapshot)) { currentMode = mode; enterGame(); return true; }
+    const candidate = mode === 'free' ? new DiscoFreeEngine.Game() : new DiscoEngine.Game();
+    if (snapshot && candidate.restore(snapshot)) {
+      game = candidate; currentMode = mode;
+      const report = clock.resume(mode, game);
+      enterGame(); showOfflineReport(report); return true;
+    }
     return false;
   }
   function beginFree() {
+    if (!canWrite) return;
     audio?.resumeFromGesture?.();
     if (resumeMode('free')) return;
     if (hasGame) save();
-    currentMode = 'free'; game.startFree(); enterGame();
+    currentMode = 'free'; game = new DiscoFreeEngine.Game(); game.startFree(); enterGame();
   }
   function selectChallenge() {
+    if (!canWrite) return;
     showPanel({ title: '挑战模式', subtitle: '三个目标，逐步解锁。自由经营的进度会单独保留。',
       build(body) {
         body.className = 'panel-body menu-grid';
@@ -1773,26 +2680,33 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
     const obj = DiscoEngine.OBJECTIVES[level - 1];
     describe('第 ' + level + ' 关 · ' + obj.title,
       [obj.description, '每个营业日为 30 秒，菜单打开时计时暂停。' + (store.get('challenge') ? '开始后将替换原来的闯关进度；自由经营不受影响。' : '')],
-      { confirm: '开始挑战', action: () => { if (hasGame) save(); currentMode = 'challenge'; game.start(level); enterGame(); }, cancel: selectChallenge, back: selectChallenge });
+      { confirm: '开始挑战', action: () => { if (!canWrite) return; if (hasGame) save(); currentMode = 'challenge'; game = new DiscoEngine.Game(); game.start(level); enterGame(); }, cancel: selectChallenge, back: selectChallenge });
   }
   function returnWelcome() {
-    save(); closePanel(); screen = 'welcome'; document.body.dataset.screen = screen; $('welcome').hidden = false;
+    closePanel(); screen = 'welcome'; document.body.dataset.screen = screen; $('welcome').hidden = false; save();
     refreshWelcome(); syncAudio(); say('选择你的下一场夜生活。');
   }
   function showMenu() {
+    if (!hasGame || !canWrite || screen !== 'game') return;
     save();
     showPanel({ title: '你的舞厅', subtitle: currentMode === 'free' ? '自由经营 · 没有通关期限' : '挑战模式 · 第 ' + game.state.level + ' 关',
       build(body) {
         body.className = 'panel-body menu-grid';
         row(body, { title: '继续营业', detail: '回到舞池', action: closePanel, icon: '▷' });
         row(body, { title: '经营状况', detail: '查看设备、现金和贷款', action: showStats, icon: '≋' });
+        if (isFree()) {
+          row(body, { title: '成长目标', detail: '查看声望与长期经营进度', action: showGoals, icon: '☆' });
+          row(body, { title: '主题与布置', detail: '选择配色，自由摆放已有装饰', action: showDecor, icon: '✦' });
+        }
         row(body, { title: currentMode === 'free' ? '切换到挑战模式' : '切换到自由经营', detail: '两种模式分别保存进度', action: currentMode === 'free' ? selectChallenge : beginFree, icon: '⇄' });
         row(body, { title: '玩法与保存说明', detail: '操作、离线与添加到主屏幕', action: showHelp, icon: '?' });
         row(body, { title: '返回开始画面', detail: '进度已保存，随时再来', action: returnWelcome, icon: '⌂' });
       }, actions: [{ label: '继续营业', action: closePanel, primary: true }] });
   }
   function showManage() {
+    if (!hasGame || !canWrite) return;
     if (game.state.needsRecovery) { showRecovery(); return; }
+    if (isFree()) { showFreeManage(); return; }
     showPanel({ title: '经营舞厅', subtitle: '可用现金 $' + format(game.state.cash),
       build(body) {
         body.className = 'panel-body menu-grid';
@@ -1805,6 +2719,12 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   }
   function showCatalog(category) {
     if (!hasGame || game.state.needsRecovery) return;
+    if (isFree()) {
+      if (category === 'host') showStaff('dj');
+      else if (DiscoFreeEngine.CATALOG[category]) showFreeCatalog(category);
+      else showDecor();
+      return;
+    }
     showPanel({ title: names[category], subtitle: '现金 $' + format(game.state.cash) + ' · 购买后立即生效', back: showManage,
       build(body) {
         body.className = 'panel-body menu-grid';
@@ -1827,6 +2747,8 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       } });
   }
   function showLoan() {
+    if (!hasGame || !canWrite) return;
+    if (isFree()) { showFreeLoan(); return; }
     if (game.state.loan) { describe('贷款还款中', ['尚需偿还 $' + format(game.state.loan) + '。营业收入会自动用于偿还贷款，结清后可以再次申请。'], { action: showManage, back: showManage }); return; }
     describe('周转贷款', ['借入 $1,000，需要偿还 $1,500。', '营业收入会自动用于还款，申请前请留意现金周转。'],
       { confirm: '申请贷款', cancel: showManage, back: showManage, action: () => {
@@ -1836,6 +2758,8 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
       } });
   }
   function showStats() {
+    if (!hasGame || !canWrite) return;
+    if (isFree()) { showFreeStats(); return; }
     const s = game.state;
     showPanel({ title: '经营状况', subtitle: currentMode === 'free' ? '自由经营 · 第 ' + s.day + ' 天' : '第 ' + s.level + ' 关 · 第 ' + s.day + ' 天', back: showMenu,
       build(body) {
@@ -1847,25 +2771,287 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
         body.append(list);
       }, actions: [{ label: '回到舞厅', action: closePanel, primary: true }] });
   }
+  function stats(body, entries) {
+    const list = node('dl', 'stat-list');
+    for (const [label, value] of entries) {
+      const item = node('div'); item.append(node('dt', '', label), node('dd', '', value)); list.append(item);
+    }
+    body.append(list);
+  }
+  function section(body, title) { body.append(node('h3', 'panel-section-title', title)); }
+  function finish(result, next = closePanel) {
+    game.drainMessages();
+    if (result?.ok === false) {
+      describe('暂时无法操作', [result.message || '请检查当前条件后重试。'], { action: next, back: next }); return false;
+    }
+    save(); updateHud(); next(); say(result?.message || '已更新，进度已保存。'); return true;
+  }
+  function showFreeManage() {
+    if (!hasGame || !canWrite || !isFree()) return;
+    const s = game.state;
+    showPanel({ title: '经营舞厅', subtitle: '可用现金 ' + money(s.cash) + ' · 声望 ' + format(s.reputation),
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        if (s.basicMode) copy(body, ['当前为基础自营，优先积累现金。可以随时恢复完整经营。']);
+        for (const key of ['venue', 'floor', 'lights', 'speakers', 'decks', 'bar', 'lounge']) {
+          row(body, { title: names[key], detail: descriptions[key], icon: icons[key], value: 'Lv.' + (key === 'venue' ? s.venue : s.equipment[key] || 0), action: () => showFreeCatalog(key) });
+        }
+        row(body, { title: '员工团队', detail: '招聘、上岗与成长晋升', icon: '♫', value: Object.values(s.staff).filter(v => v.hired && v.onDuty).length + ' 在岗', action: showStaff });
+        row(body, { title: '主题与布置', detail: '更换主题，布置舞池、吧台与休息区', icon: '✦', action: showDecor });
+        row(body, { title: '资金与贷款', detail: s.debt ? '当前欠款 ' + money(s.loan) : '查看借款规则与主动还款', icon: '$', action: showFreeLoan });
+        row(body, { title: s.basicMode ? '恢复完整经营' : '切换基础自营', detail: s.basicMode ? '重新启用设施；员工可分别安排上岗' : '现金紧张时减少开支，资产与债务保留', icon: '↺', action: confirmBasicMode });
+      }, actions: [{ label: '返回舞厅', action: closePanel, primary: true }] });
+  }
+  function showFreeCatalog(category) {
+    const s = game.state;
+    showPanel({ title: names[category], subtitle: '升级只补差价 · 可用现金 ' + money(s.cash), back: showFreeManage,
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        for (const item of DiscoFreeEngine.CATALOG[category]) {
+          const owned = (category === 'venue' ? s.venue : s.equipment[category] || 0) >= item.tier;
+          const q = game.quote(category, item.tier);
+          row(body, { title: item.label, detail: owned ? '已拥有这个级别或更好的设施' : q.ok ? item.description : q.message || q.requirementMessage,
+            value: owned ? '已拥有' : money(q.cost), icon: icons[category], disabled: owned,
+            action: () => confirmFreePurchase(category, item) });
+        }
+      }, actions: [{ label: '返回经营', action: showFreeManage }] });
+  }
+  function confirmFreePurchase(category, item) {
+    const q = game.quote(category, item.tier);
+    const back = () => showFreeCatalog(category);
+    if (!q.ok) { describe('暂时无法升级', [q.message || q.requirementMessage || '条件尚未满足。', item.description], { action: back, back }); return; }
+    showPanel({ title: item.label, subtitle: '升级后立即生效', back,
+      build(body) {
+        copy(body, [q.description || item.description]);
+        stats(body, [['本次补差价', money(q.cost)], ['每夜新增维护费', money(q.maintenanceDelta)], ['购买后可用现金', money(q.cashAfter ?? game.state.cash - q.cost)]]);
+      }, actions: [{ label: '再想想', action: back }, { label: '确认升级', primary: true, action: () => finish(game.buy(category, item.tier)) }] });
+  }
+  function showStaff(role) {
+    if (!isFree() || !hasGame || !canWrite) return;
+    if (typeof role === 'string') { showStaffMember(role); return; }
+    showPanel({ title: '员工团队', subtitle: '营业时积累经验 · 不在岗不收工资', back: showFreeManage,
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        if (game.state.basicMode) copy(body, ['基础自营期间由你照看舞厅。恢复完整经营后可安排员工上岗。']);
+        for (const [key, meta] of Object.entries(DiscoFreeEngine.STAFF)) {
+          const person = game.state.staff[key];
+          row(body, { title: meta.label, detail: person.hired ? 'Lv.' + person.level + ' · ' + money(person.wage) + '/夜 · ' + (person.onDuty ? '在岗' : '休息') : meta.description,
+            value: person.hired ? '管理' : money(meta.hireCost), icon: key === 'dj' ? '♫' : key === 'manager' ? '☆' : '♧', action: () => showStaffMember(key) });
+        }
+      }, actions: [{ label: '返回舞厅', action: closePanel, primary: true }] });
+  }
+  function showStaffMember(role) {
+    const meta = DiscoFreeEngine.STAFF[role], person = game.state.staff[role];
+    if (!meta || !person) return;
+    if (!person.hired) {
+      showPanel({ title: '招聘' + meta.label, subtitle: '招聘费只支付一次，工资按实际在岗时间计算', back: showStaff,
+        build(body) {
+          copy(body, [meta.description, '初级能力：' + meta.benefits[0] + '。']);
+          stats(body, [['招聘费', money(meta.hireCost)], ['初级工资', money(meta.baseWage) + '/夜'], ['招聘后可用现金', money(game.state.cash - meta.hireCost)]]);
+          if (game.state.cash < meta.hireCost) copy(body, ['可用现金不足，可以先积累营业收入。']);
+        }, actions: [{ label: '返回团队', action: showStaff }, { label: '确认招聘', primary: true, action: () => finish(game.hire(role), () => showStaffMember(role)) }] });
+      return;
+    }
+    showPanel({ title: meta.label + ' · Lv.' + person.level, subtitle: person.onDuty ? '正在当班' : '休息中，不产生工资', back: showStaff,
+      build(body) {
+        copy(body, [meta.description, '当前能力：' + person.benefit + '。']);
+        stats(body, [['当前工资', money(person.wage) + '/夜'], ['成长经验', format(person.xp) + (person.nextXp ? ' / ' + format(person.nextXp) : ' · 已满级')]]);
+        const p = person.promotion;
+        section(body, '工作安排');
+        row(body, { title: person.onDuty ? '安排休息' : '安排上岗', detail: person.onDuty ? '停工后暂停工资与岗位加成' : '上岗后启用岗位效果并计算工资', value: person.onDuty ? '停工' : '上岗', icon: '⇄', action: () => finish(game.setDuty(role, !person.onDuty), () => showStaffMember(role)) });
+        if (p) {
+          section(body, '成长晋升');
+          row(body, { title: '晋升至 Lv.' + p.level, detail: p.description + (p.eligible ? '' : ' · 需要经验 ' + format(p.requiredXp)), value: money(p.cost), icon: '↗', action: () => confirmPromotion(role) });
+        } else copy(body, ['这位员工已经达到最高等级。']);
+      }, actions: [{ label: '返回团队', action: showStaff }] });
+  }
+  function confirmPromotion(role) {
+    const p = game.state.staff[role].promotion, meta = DiscoFreeEngine.STAFF[role];
+    const back = () => showStaffMember(role);
+    if (!p) return;
+    showPanel({ title: meta.label + '晋升', subtitle: '先满足经验要求，再支付培训费用', back,
+      build(body) {
+        copy(body, [p.description]);
+        stats(body, [['所需经验', format(p.requiredXp)], ['培训费', money(p.cost)], ['晋升后工资', money(p.wage) + '/夜'], ['每夜工资增加', money(p.wageDelta)], ['晋升后可用现金', money(game.state.cash - p.cost)]]);
+        if (!p.eligible) copy(body, ['晋升需要满足经验要求并备好培训费用。继续安排上岗可以积累经验。']);
+      }, actions: [{ label: '返回', action: back }, { label: '确认晋升', primary: true, action: () => finish(game.promote(role), back) }] });
+  }
+  function showFreeLoan() {
+    const d = game.state.debt;
+    showPanel({ title: d ? '贷款与还款' : '周转贷款', subtitle: '可用现金 ' + money(game.state.cash), back: showFreeManage,
+      build(body) {
+        if (!d) {
+          copy(body, ['可借入 $1,000，同时只能持有一笔贷款。利息仅按剩余本金逐夜计算，不收复利，整笔累计利息最多 $100。', '正经营利润的 20% 会自动还款；也可以随时主动还款，提前结清不收额外费用。']);
+          row(body, { title: '查看借款确认', detail: '先查看利率与到账金额', value: '$1,000', icon: '$', action: confirmLoan });
+          return;
+        }
+        stats(body, [['剩余本金', money(d.principal)], ['已发生未付利息', money(d.interest)], ['当前合计欠款', money(game.state.loan)], ['每营业夜利率', (d.rate * 100).toLocaleString('zh-CN', { maximumFractionDigits: 3 }) + '%'], ['累计利息 / 上限', money(d.totalInterest) + ' / ' + money(d.cap)], ['已预留自动还款', money(game.state.repaymentReserve)]]);
+        copy(body, ['利息不参与复利，已付利息也计入上限。主动还款先支付已发生的利息，再减少本金。']);
+        section(body, '主动还款');
+        const field = node('label', 'amount-field', '输入本次还款金额');
+        const input = node('input'); input.type = 'number'; input.inputMode = 'decimal'; input.min = '1'; input.step = '1'; input.max = String(Math.min(game.state.cash, game.state.loan)); input.value = String(Math.min(100, Math.floor(game.state.cash), Math.ceil(game.state.loan))); input.setAttribute('aria-label', '本次还款金额');
+        field.append(input); body.append(field);
+        const actions = node('div', 'inline-actions');
+        actions.append(panelAction('预览部分还款', () => {
+          const amount = Number(input.value);
+          if (!Number.isFinite(amount) || amount <= 0) { input.setCustomValidity('请输入大于 0 的还款金额'); input.reportValidity(); return; }
+          input.setCustomValidity(''); confirmRepayment(amount);
+        }), panelAction('预览全部还清', () => confirmRepayment(Infinity), true));
+        input.addEventListener('input', () => input.setCustomValidity(''));
+        body.append(actions);
+      }, actions: [{ label: '返回经营', action: showFreeManage }] });
+  }
+  function confirmLoan() {
+    const rate = DiscoFreeEngine.LOAN.rate;
+    const rateText = Number.isFinite(rate) ? '每营业夜利率为 ' + (rate * 100).toLocaleString('zh-CN', { maximumFractionDigits: 3 }) + '%。' : '每夜按剩余本金计息。';
+    describe('借入 $1,000', [rateText + '累计利息上限为 $100，已支付的利息不会重置这个上限。', '到账后可用现金 ' + money(game.state.cash + 1000) + '。正经营利润的 20% 自动还款，也可以随时主动还清。'],
+      { confirm: '确认借款', cancel: showFreeLoan, back: showFreeLoan, action: () => finish(game.takeLoan(1000), showFreeLoan) });
+  }
+  function confirmRepayment(amount) {
+    const q = game.repaymentQuote(amount);
+    if (q.ok === false || !(q.amount > 0)) { describe('暂时无法还款', [q.message || '当前没有足够的可用现金。'], { action: showFreeLoan, back: showFreeLoan }); return; }
+    showPanel({ title: q.remaining <= .01 ? '确认全部还清' : '确认部分还款', subtitle: '只支付当前已发生的本金与利息', back: showFreeLoan,
+      build(body) {
+        stats(body, [['本次从可用现金支付', money(q.manualAmount ?? q.amount)], ['同时结算已预留自动款', money(q.automaticAmount)], ['偿还利息', money(q.interestPaid)], ['减少本金', money(q.principalPaid)], ['还后剩余欠款', money(q.remaining)], ['还后可用现金', money(q.cashAfter)]]);
+        if (amount === Infinity && q.remaining > .01) copy(body, ['当前现金不足以全部结清。本次预览会用可用现金尽量还款，请确认保留的经营资金是否足够。']);
+        copy(body, [q.remaining <= .01 ? '结清后，这笔贷款不再产生利息，自动还款也会结束。' : '剩余本金降低，后续利息会按新的本金计算。']);
+      }, actions: [{ label: '取消', action: showFreeLoan }, { label: '确认还款', primary: true, action: () => finish(game.repay(amount), showFreeLoan) }] });
+  }
+  function confirmBasicMode() {
+    const entering = !game.state.basicMode;
+    describe(entering ? '切换基础自营' : '恢复完整经营', entering
+      ? ['你将自己接待客人，员工暂时停工，高开销设施关闭。基础自营可以缓慢积累现金。', '已有设备、装饰、员工与债务全部保留。不会赠送现金或免除贷款。']
+      : ['重新启用已有设施，恢复相应维护开支。员工可以在团队菜单中逐个安排上岗。'],
+      { confirm: entering ? '开始自营' : '恢复经营', cancel: showFreeManage, back: showFreeManage, action: () => finish(game.setBasicMode(entering), showFreeManage) });
+  }
+  function showFreeStats() {
+    const s = game.state, ledger = s.ledger;
+    showPanel({ title: '经营账本', subtitle: '第 ' + s.day + ' 天 · ' + (s.basicMode ? '基础自营' : '完整经营'), back: showMenu,
+      build(body) {
+        stats(body, [['可用现金', money(s.cash)], ['场地容量', s.visitors + ' / ' + s.capacity + ' 人'], ['舞厅声望', format(s.reputation)], ['当前贷款', money(s.loan)]]);
+        for (const [label, account] of [['今晚累计', ledger.current], ['上一营业夜', ledger.last]]) {
+          section(body, label);
+          if (!account) { body.append(node('p', 'empty-state', '完成第一夜后，这里会显示结算。')); continue; }
+          stats(body, [['门票收入', money(account.ticketRevenue)], ['已完成酒水收入', money(account.drinkRevenue)], ['酒水原料', money(account.ingredients)], ['在岗工资', money(account.wages)], ['设施维护', money(account.maintenance)], ['经营利润（还贷前）', money(account.operatingProfit)], ['自动还贷', money(account.repayments)], ['主动还贷', money(account.manualRepayments)], ['本夜新增利息', money(account.interestAccrued)], ['已完成酒水 / 放弃订单', format(account.drinksSold) + ' / ' + format(account.abandoned)]]);
+          section(body, label + ' · 其他资金变动');
+          stats(body, [['建设、装饰与培训', money(account.capital)], ['借款到账', money(account.financing)]]);
+        }
+        copy(body, ['经营利润 = 门票与已完成消费收入 − 原料、工资和维护。建设、装饰与借款本金分别记账，不当作经营利润。']);
+        section(body, '离线经营参考');
+        const estimate = game.estimateOffline();
+        copy(body, ['当前稳定配置每普通营业夜预计净利润 ' + money(estimate.profitPerNight) + '。这是估算，实际经营会随客流与服务情况变化。', '离线 1 小时先折算为 1 个普通营业夜，再按时长递减结算；最多计算连续 24 小时。离线不增加员工经验或声望，倍速不放大离线收入。']);
+      }, actions: [{ label: '资金与贷款', action: showFreeLoan }, { label: '返回舞厅', action: closePanel, primary: true }] });
+  }
+  function showGoals() {
+    showPanel({ title: '成长目标', subtitle: '声望 ' + format(game.state.reputation) + ' · 没有营业天数限制', back: showMenu,
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        for (const goal of game.state.goals || []) {
+          const card = node('section', 'goal-card');
+          const heading = node('div', 'goal-card-heading'); heading.append(node('h3', '', goal.label), node('span', 'mode-badge', goal.complete ? '已完成' : format(goal.progress) + ' / ' + format(goal.target)));
+          card.append(heading, node('p', '', goal.description));
+          const progress = node('progress'); progress.max = goal.target || 1; progress.value = goal.progress || 0; progress.setAttribute('aria-label', goal.label + '进度'); card.append(progress); body.append(card);
+        }
+        copy(body, ['目标会自动记录进度，不需要领取，也不会因为某一天没上线而失效。']);
+      }, actions: [{ label: '返回舞厅', action: closePanel, primary: true }] });
+  }
+  function showSpeed() {
+    if (!isFree() || !hasGame) return;
+    showPanel({ title: '经营速度', subtitle: '一个普通营业夜为 180 秒模拟时间',
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        for (const speed of [.5, 1, 2, 5]) row(body, { title: speed + '× 速度', detail: speed === .5 ? '慢慢观察客人的活动' : speed === 1 ? '标准经营节奏' : '加快经营、工资、计息和员工成长', value: speed === game.state.speed ? '当前' : '选择', icon: '▷', action: () => finish(game.setSpeed(speed)) });
+        copy(body, ['速度会保存。收入与成本一起加快，离线收益保持普通时间规则。']);
+      }, actions: [{ label: '返回舞厅', action: closePanel }] });
+  }
+  function decorMeta(itemId) { return DiscoFreeEngine.DECOR.find(item => item.id === itemId); }
+  function showDecor() {
+    if (!hasGame || !canWrite || !isFree()) return;
+    const s = game.state;
+    showPanel({ title: '主题与布置', subtitle: '装饰保留在你的舞厅，移动与收纳不收费', back: showFreeManage,
+      build(body) {
+        body.className = 'panel-body menu-grid'; section(body, '舞厅主题');
+        for (const theme of DiscoFreeEngine.THEMES) {
+          const owned = s.ownedThemes.includes(theme.id), active = s.theme === theme.id;
+          row(body, { title: theme.label, detail: theme.description || '更换舞厅整体色彩与氛围', value: active ? '使用中' : owned ? '免费切换' : money(theme.cost), icon: '✦', disabled: active,
+            action: () => owned ? finish(game.setTheme(theme.id), showDecor) : describe('购买' + theme.label, [theme.description || '更换舞厅整体色彩与氛围。', '本次花费 ' + money(theme.cost) + '，购买后可用现金 ' + money(s.cash - theme.cost) + '。购入后可以免费切换。'], { confirm: '购买主题', cancel: showDecor, back: showDecor, action: () => finish(game.setTheme(theme.id), showDecor) }) });
+        }
+        section(body, '添置装饰');
+        for (const item of DiscoFreeEngine.DECOR) row(body, { title: item.label, detail: item.description || '可摆放在' + item.zones.map(zone => zones[zone]).join('、'), value: money(item.cost), icon: '◇', action: () => chooseDecorZone(item) });
+        section(body, '已有装饰 · ' + s.decor.length);
+        if (!s.decor.length) body.append(node('p', 'empty-state', '添置一件装饰，开始布置你的舞厅。'));
+        for (const placed of s.decor) {
+          const item = decorMeta(placed.itemId); if (!item) continue;
+          row(body, { title: item.label, detail: placed.placed ? zones[placed.zone] + ' · 第 ' + (placed.y + 1) + ' 行，第 ' + (placed.x + 1) + ' 列' : '已收纳，可再次摆放', value: '管理', icon: '◇', action: () => manageDecor(item, placed) });
+        }
+      }, actions: [{ label: '返回舞厅', action: closePanel, primary: true }] });
+  }
+  function manageDecor(item, placed) {
+    showPanel({ title: item.label, subtitle: placed.placed ? '已有装饰，可免费移动或收纳' : '仓库中的装饰，可免费摆放', back: showDecor,
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        row(body, { title: placed.placed ? '移动位置' : '重新摆放', detail: '选择分区与空位置', value: '免费', action: () => chooseDecorZone(item, placed), icon: '↗' });
+        if (placed.placed) row(body, { title: '收纳装饰', detail: '放入仓库，之后可免费再次摆放', value: '收纳', action: () => finish(game.removeDecor(placed.id), showDecor), icon: '▱' });
+        copy(body, ['收纳不会出售装饰，也不会返还现金。']);
+      }, actions: [{ label: '返回布置', action: showDecor }] });
+  }
+  function chooseDecorZone(item, placed = null) {
+    showPanel({ title: item.label + ' · 选择分区', subtitle: placed ? '移动已有装饰，费用 $0' : '选好位置后再确认付款 ' + money(item.cost), back: showDecor,
+      build(body) {
+        body.className = 'panel-body menu-grid';
+        for (const zone of item.zones) row(body, { title: zones[zone], detail: '4 列 × 3 行，任选空位置', icon: '▧', action: () => chooseDecorCell(item, zone, placed) });
+      }, actions: [{ label: '返回布置', action: showDecor }] });
+  }
+  function chooseDecorCell(item, zone, placed = null) {
+    const back = () => chooseDecorZone(item, placed);
+    showPanel({ title: zones[zone] + ' · 摆放位置', subtitle: '每格放一件装饰。点击空格预览确认。', back,
+      build(body) {
+        const grid = node('div', 'decor-grid'); grid.setAttribute('role', 'group'); grid.setAttribute('aria-label', zones[zone] + '，4 列 3 行摆放网格');
+        for (let y = 0; y < 3; y++) for (let x = 0; x < 4; x++) {
+          const occupied = game.state.decor.find(d => d.placed && d.zone === zone && d.x === x && d.y === y && d.id !== placed?.id);
+          const current = placed?.placed && placed.zone === zone && placed.x === x && placed.y === y;
+          const b = node('button', 'decor-cell' + (current ? ' is-selected' : ''), occupied ? decorMeta(occupied.itemId)?.label || '已占用' : current ? '当前位置' : (y + 1) + ' · ' + (x + 1));
+          b.type = 'button'; b.disabled = Boolean(occupied); b.setAttribute('aria-label', '第 ' + (y + 1) + ' 行，第 ' + (x + 1) + ' 列，' + (occupied ? '已有装饰' : current ? '当前位置' : '可摆放'));
+          b.addEventListener('click', () => confirmDecorPlacement(item, zone, x, y, placed)); grid.append(b);
+        }
+        body.append(grid); copy(body, ['上方是区域后排，下方是前排。位置会同步到舞厅画面。']);
+      }, actions: [{ label: '更换分区', action: back }] });
+  }
+  function confirmDecorPlacement(item, zone, x, y, placed) {
+    const cost = placed ? 0 : item.cost, back = () => chooseDecorCell(item, zone, placed);
+    describe((placed ? '摆放' : '购买') + item.label, ['位置：' + zones[zone] + '，第 ' + (y + 1) + ' 行，第 ' + (x + 1) + ' 列。', '本次花费 ' + money(cost) + '，完成后可用现金 ' + money(game.state.cash - cost) + '。装饰可免费移动与收纳。'],
+      { confirm: placed ? '确认摆放' : '购买并摆放', cancel: back, back, action: () => finish(game.placeDecor(item.id, zone, x, y, placed?.id), showDecor) });
+  }
+  function showOfflineReport(report) {
+    if (!report || report.profit < 1 && report.repaid < 1 && report.hours < 1 / 60) return;
+    showPanel({ title: '欢迎回来', subtitle: '离线经营已结算并保存',
+      build(body) {
+        stats(body, [['离开时长', report.hours < 1 ? Math.max(1, Math.round(report.hours * 60)) + ' 分钟' : report.hours.toFixed(1) + ' 小时'], ['折算营业夜', Number(report.equivalentNights || 0).toFixed(2)], ['经营净利润', money(report.profit)], ['自动偿还贷款', money(report.repaid)], ['可用现金增加', money(report.cash)]]);
+        copy(body, ['原料、工资与维护已计入净利润；回来后不会重复扣费。离线不会增加员工经验或声望。']);
+      }, actions: [{ label: '继续经营', action: () => { closePanel(); if (game.state.needsRecovery) showRecovery(); }, primary: true }] });
+  }
   function showHelp() {
     showPanel({ title: '怎么玩', subtitle: '经营你自己的夜生活',
       build(body) {
         body.className = 'panel-body';
-        copy(body, ['自由经营没有通关目标和营业天数限制。资金耗尽后，可以重整营业，保留设备继续玩。',
+        copy(body, ['自由经营没有通关期限，场地可以逐步扩建。添置设备、培养员工、经营吧台，再用主题和装饰布置舞厅。',
           '挑战模式保留三个目标关卡。两种模式分别存档，切换时不会覆盖另一边的进度。',
-          '轻点舞厅里的设备，或打开「经营」购买设备、邀请 DJ、推广和贷款。欢乐时间能提高气氛，也会持续消耗现金。',
-          '每个营业日为 30 秒。打开菜单、暂停或切到后台时，经营计时停止。',
-          '进度约每 5 秒保存，也会在暂停和退出时保存。存档位于当前设备的浏览器，清理网站数据会删除存档。',
+          '轻点舞厅里的设备，或打开「经营」查看升级。自由模式中每个营业夜为 180 秒模拟时间，速度可以设为 0.5、1、2 或 5 倍。挑战模式仍为每夜 30 秒。',
+          '菜单打开时，现场经营计时停止。自由模式在实际离开页面后可获得递减的离线收益；主动暂停或返回开始画面会停止离线经营。离线时不会获得员工经验或声望。',
+          '现金紧张时可切换基础自营，减少开支并缓慢积累现金。设备、员工和债务都会保留，不会赠送现金或免除贷款。',
+          '贷款仅按剩余本金计息，正经营利润的 20% 自动还贷。可在资金菜单中预览部分还款或全部结清。',
+          '进度约每 5 秒保存，购买、升级和退出时也会保存。存档位于当前设备的浏览器，清理网站数据会删除存档。',
+          '目前数值为第一轮平衡，收入取决于入场和已完成的服务，没有保证几天就能完成所有升级。',
           '在 iPhone Safari 中打开，选择「分享 → 添加到主屏幕」，以后可以从桌面图标进入。',
           offlineReady ? '离线资源已准备好，完成首次加载后可以离线游玩。' : '联网打开后会准备离线资源；请等待首次加载完成。']);
       }, actions: [{ label: '知道了', action: closePanel, primary: true }] });
   }
   function showRecovery() {
-    describe('休息一下，再开场', ['现金用完了，舞厅已暂停营业。', '重整后获得 $2,000 启动资金、结清贷款；保留设备、客人和营业天数。临时 DJ、活动和欢乐时间会结束。'],
-      { confirm: '重整营业', cancel: closePanel, action: () => {
+    describe('从基础自营重新出发', ['可用现金不足，舞厅暂时停下了。', '切换基础自营后，由你自己接待客人，员工休息，高开销设施关闭。已有资产和债务都会保留，不会赠送现金或清除贷款。', '先靠基础门票缓慢积累现金，再逐步恢复服务。'],
+      { confirm: '开始基础自营', cancel: closePanel, action: () => {
         const result = game.recoverFreeBusiness();
         if (result?.ok === false) { say(result.message || '当前无需重整。'); return; }
-        terminalShown = ''; paused = false; save(); closePanel(); updateHud(); say('舞厅重新开张。已有设备都还在，继续创造好时光。');
+        terminalShown = ''; paused = false; save(); closePanel(); updateHud(); say('基础自营已开始，资产与债务保留，慢慢积累下一笔资金。');
       } });
   }
   function showResult() {
@@ -1884,18 +3070,23 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   }
   function updateHud() {
     const s = game.state;
-    put('cash-value', '$' + format(s.cash)); put('visitors-value', format(s.visitors)); put('mood-value', s.happiness + '%');
+    put('cash-value', '$' + format(s.cash)); put('visitors-value', format(s.visitors)); put('mood-value', Math.round(s.happiness) + '%');
     put('day-value', '第 ' + s.day + ' 天'); put('mode-label', currentMode === 'free' ? '自由经营' : '第 ' + s.level + ' 关');
-    put('goal-label', currentMode === 'free' ? '不限营业天数，慢慢经营你的舞厅' : s.objective.description);
-    $('goal-progress').hidden = currentMode === 'free'; $('goal-progress').max = 1; $('goal-progress').value = s.progress;
-    $('goal-progress').setAttribute('aria-label', '挑战进度 ' + Math.round(s.progress * 100) + '%');
+    const goal = isFree() ? s.goals?.find(g => !g.complete) : null;
+    put('goal-label', isFree() ? s.basicMode ? '基础自营 · 稳步积累现金' : goal ? goal.label : '不限天数，继续经营你的舞厅' : s.objective.description);
+    $('goal-progress').hidden = isFree(); $('goal-progress').max = 1; $('goal-progress').value = s.progress || 0;
+    $('goal-progress').setAttribute('aria-label', '挑战进度 ' + Math.round((s.progress || 0) * 100) + '%');
+    $('speed-button').hidden = !isFree(); $('speed-button').disabled = !canWrite || !hasGame;
+    put('speed-button', (s.speed || 1) + '×'); $('speed-button').setAttribute('aria-label', '经营速度，当前 ' + (s.speed || 1) + ' 倍');
     const pauseText = $('pause-toggle').querySelector('[data-label]'); if (pauseText) pauseText.textContent = paused ? '继续' : '暂停';
     $('pause-toggle').setAttribute('aria-pressed', String(paused));
     $('pause-toggle').setAttribute('aria-label', paused ? '继续营业' : '暂停营业');
-    $('pause-toggle').disabled = screen !== 'game' || s.needsRecovery || s.status !== 'playing';
-    $('happy-button').setAttribute('aria-pressed', String(s.happyHour));
-    $('happy-button').disabled = paused || s.needsRecovery || s.status !== 'playing';
-    $('happy-button').classList.toggle('is-active', s.happyHour);
+    $('pause-toggle').disabled = !canWrite || screen !== 'game' || s.needsRecovery || s.status !== 'playing';
+    if (isFree()) $('happy-button').removeAttribute('aria-pressed'); else $('happy-button').setAttribute('aria-pressed', String(s.happyHour));
+    $('manage-button').disabled = $('menu-button').disabled = !canWrite || !hasGame || screen !== 'game';
+    $('happy-button').disabled = !canWrite || !hasGame || screen !== 'game' || s.needsRecovery || s.status !== 'playing' || !isFree() && paused;
+    $('happy-button').classList.toggle('is-active', !isFree() && s.happyHour);
+    $('happy-button').querySelector('[data-label]').textContent = isFree() ? '员工' : '欢乐时间';
     canvas.dataset.screen = screen; canvas.dataset.mode = s.mode; canvas.dataset.day = s.day; canvas.dataset.cash = s.cash;
     canvas.dataset.visitors = s.visitors; canvas.dataset.happiness = s.happiness; canvas.dataset.paused = String(paused || panel.open);
     canvas.dataset.needsRecovery = String(Boolean(s.needsRecovery)); canvas.dataset.equipment = JSON.stringify(s.equipment);
@@ -1908,12 +3099,15 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   $('menu-button').addEventListener('click', showMenu);
   $('help-toggle').addEventListener('click', showHelp);
   $('happy-button').addEventListener('click', () => {
+    if (!canWrite) return;
+    if (isFree()) { showStaff(); return; }
     if (paused || panel.open || game.state.needsRecovery) return;
     audio?.resumeFromGesture?.(); game.toggleHappyHour(); save(); updateHud();
     say(game.state.happyHour ? '欢乐时间开启，客人更开心，现金也会持续消耗。' : '欢乐时间结束，恢复正常营业。');
   });
+  $('speed-button').addEventListener('click', showSpeed);
   $('pause-toggle').addEventListener('click', () => {
-    if (!hasGame) return;
+    if (!hasGame || !canWrite) return;
     paused = !paused; save(); syncAudio(); updateHud(); say(paused ? '营业已暂停，进度已保存。' : '继续营业。');
   });
   $('sound-toggle').addEventListener('click', async () => {
@@ -1943,7 +3137,7 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   canvas.addEventListener('pointerup', event => {
     const start = pointer; pointer = null;
     if (!start || start.id !== event.pointerId || Math.hypot(start.x - event.clientX, start.y - event.clientY) > 12) return;
-    if (screen !== 'game' || panel.open || paused || game.state.needsRecovery) return;
+    if (!canWrite || screen !== 'game' || panel.open || paused || game.state.needsRecovery) return;
     audio?.resumeFromGesture?.();
     const category = renderer.pick?.(event.clientX, event.clientY);
     if (category && names[category]) showCatalog(category);
@@ -1954,9 +3148,16 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
     if (event.key === 'Escape') showMenu();
     if (event.key.toLowerCase() === 'm') showManage();
   });
-  function visibility() { visible = !document.hidden; if (!visible) save(); syncAudio(); }
+  function visibility() {
+    visible = !document.hidden;
+    if (hasGame && canWrite) {
+      if (visible) { showOfflineReport(clock.foreground(currentMode, game)); save(); }
+      else clock.suspend(currentMode, game, { offlineEnabled: offlineEnabled() });
+    }
+    syncAudio(); updateHud();
+  }
   document.addEventListener('visibilitychange', visibility);
-  window.addEventListener('pagehide', () => { visible = false; save(); syncAudio(); });
+  window.addEventListener('pagehide', () => { if (hasGame && canWrite) clock.suspend(currentMode, game, { offlineEnabled: offlineEnabled() }); visible = false; syncAudio(); });
   window.addEventListener('pageshow', visibility);
   const resize = () => renderer.resize?.();
   window.addEventListener('resize', resize);
@@ -1964,10 +3165,10 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
   if (typeof ResizeObserver === 'function') new ResizeObserver(resize).observe(canvas);
   function frame(now) {
     const dt = Math.max(0, Math.min((now - lastTime) / 1000, .25)); lastTime = now;
-    const running = visible && !paused && !panel.open && screen === 'game' && hasGame && !game.state.needsRecovery && game.state.status === 'playing';
+    const running = canWrite && visible && !paused && !panel.open && screen === 'game' && hasGame && !game.state.needsRecovery && game.state.status === 'playing';
     if (visible && !paused && !panel.open) { elapsed += dt; audio?.tick(); }
     if (running) {
-      game.tick(dt); saveAge += dt;
+      game.tick(dt * (isFree() ? game.state.speed : 1));
       if (game.state.needsRecovery || game.state.status !== 'playing') {
         const key = game.state.mode + ':' + game.state.status + ':' + Boolean(game.state.needsRecovery);
         if (terminalShown !== key) { terminalShown = key; save(); game.state.needsRecovery ? showRecovery() : showResult(); }
@@ -1979,8 +3180,8 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
         const notices = game.drainMessages();
         if (notices.length) { say(notices.join(' ')); }
       }
-      if (saveAge >= 5) save();
     }
+    if (canWrite && visible && hasGame) { saveAge += dt; if (saveAge >= 5) save(); }
     if (visible && now - lastPaint >= 1000 / 30) {
       renderer.draw(screen === 'welcome' ? previewState : game.state, elapsed, { preview: screen === 'welcome', reducedMotion: reduced.matches, paused: paused || panel.open || Boolean(game.state.needsRecovery) });
       lastPaint = now;
@@ -1988,9 +3189,15 @@ globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI re
     if (visible && now - lastHud > 200) { updateHud(); lastHud = now; }
     requestAnimationFrame(frame);
   }
+  canWrite = await clock.acquire();
+  if (!canWrite) {
+    for (const id of ['free-button', 'challenge-button', 'continue-button', 'manage-button', 'happy-button', 'menu-button', 'pause-toggle', 'speed-button']) $(id).disabled = true;
+    $('welcome').querySelector('.welcome-copy p').textContent = '此游戏已在另一个标签页打开，请关闭后刷新。';
+  }
   await renderer.load?.();
   document.body.dataset.screen = 'welcome'; refreshWelcome(); updateHud(); resize();
-  if (store.migrated) say('已找到原版挑战存档，可以选择「继续闯关」。');
+  if (!canWrite) say('此游戏已在另一个标签页打开，请关闭后刷新。');
+  else if (store.migrated) say('已升级旧存档，两种模式的进度分别保留。');
   else if (!store.available) say('当前浏览器无法保存进度，但仍可试玩。');
   syncAudio(); requestAnimationFrame(frame);
   if (document.querySelector('meta[name="disco-club-app"]') && 'serviceWorker' in navigator && window.isSecureContext) {
