@@ -1,0 +1,1371 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#101019">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="DISCO">
+  <title>DISCO · 迪斯科舞厅</title>
+  <style>
+:root {
+  color-scheme: dark;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+  color: #f1edf7;
+  background: #101019;
+  font-synthesis: none;
+  --accent: #d1bff4;
+  --muted: #a59bb6;
+  --game-size: min(512px, calc(100vw - 24px), calc(100vh - 184px));
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-width: 280px; background: radial-gradient(ellipse at 50% 35%, #20182e 0, #101019 72%); }
+button { font: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; -webkit-touch-callout: none; touch-action: manipulation; -webkit-user-select: none; user-select: none; }
+button:focus-visible, canvas:focus-visible { outline: 2px solid #e2ceff; outline-offset: 3px; }
+.layout {
+  display: grid;
+  grid-template-areas: "header" "stage" "controls" "status";
+  grid-template-rows: 44px minmax(0, 1fr) 48px minmax(28px, auto);
+  gap: 8px;
+  width: min(100%, 640px);
+  height: 100vh;
+  min-height: 360px;
+  margin: 0 auto;
+  padding: max(8px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+}
+.app-header { grid-area: header; display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
+.wordmark { display: flex; align-items: baseline; gap: 9px; min-width: 0; }
+h1 { margin: 0; font-family: "Arial Black", -apple-system, sans-serif; font-size: 24px; font-weight: 900; letter-spacing: -.07em; line-height: 1; }
+h1 > span { color: var(--accent); }
+.wordmark p { margin: 0; color: var(--muted); font-size: 10px; letter-spacing: .07em; white-space: nowrap; }
+.session-controls { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.session-controls button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; min-width: 44px; padding: 0 9px; border: 1px solid #3b334a; border-radius: 10px; background: #211b2c; color: #c4b8d8; font-size: 11px; white-space: nowrap; }
+.session-controls button[aria-pressed="true"] { background: #342642; border-color: #a18ab9; color: #f0e2ff; }
+.session-controls .help-button { padding: 0; font-size: 18px; }
+.sound-mark { font-size: 18px; line-height: 1; }
+.pause-mark { font-size: 15px; line-height: 1; }
+.game-stage { grid-area: stage; display: grid; grid-template-rows: minmax(0, 1fr) 18px; gap: 6px; min-width: 0; min-height: 0; }
+.game-viewport { display: grid; place-items: center; min-width: 0; min-height: 0; container-type: size; }
+#game { display: block; width: var(--game-size); height: var(--game-size); max-width: 100%; aspect-ratio: 1; background: #000; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: manipulation; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
+.game-help { margin: 0; color: #aaa0bb; text-align: center; font-size: 11px; line-height: 18px; white-space: nowrap; }
+.game-controls { grid-area: controls; display: grid; grid-template-columns: 94px minmax(0, 1fr); gap: 8px; min-width: 0; }
+.direction-controls { display: grid; grid-template-columns: repeat(2, 44px); gap: 6px; }
+.action-controls { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr); gap: 6px; min-width: 0; }
+.control { display: flex; align-items: center; justify-content: center; min-width: 44px; min-height: 48px; padding: 0 5px; border: 1px solid #5a4d6d; border-radius: 12px; background: #292134; color: #e0d6ed; font-size: 13px; line-height: 1.1; }
+.control > span { white-space: nowrap; }
+.direction { font-family: Arial, sans-serif; font-size: 25px; font-weight: 400; }
+.primary { color: #261836; background: var(--accent); border-color: #e6d8ff; font-weight: 600; }
+.control:active, .control.is-pressed { background: #51405f; box-shadow: 0 2px 5px #08040e66 inset; }
+.primary:active, .primary.is-pressed { background: #b99fdf; }
+.status { grid-area: status; align-self: start; margin: 0; color: #a59bb6; text-align: center; font-size: 11px; line-height: 14px; overflow-wrap: anywhere; }
+#install-help { position: fixed; width: min(360px, calc(100vw - 32px)); max-height: calc(100vh - 40px); max-height: calc(100dvh - 40px); padding: 24px; border: 1px solid #594968; border-radius: 18px; background: #21192e; color: #e8e0f0; line-height: 1.7; box-shadow: 0 12px 70px #0008; }
+#install-help::backdrop { background: #07040ec9; }
+#install-help h2 { margin: 0 40px 18px 0; font-size: 18px; }
+#install-help h3 { margin: 20px 0 6px; font-size: 14px; }
+#install-help p { margin: 10px 0; font-size: 13px; }
+#install-help .keyboard-tip { color: #a79ab7; font-size: 11px; }
+.dialog-close { position: absolute; top: 10px; right: 10px; min-width: 44px; min-height: 44px; border: 0; border-radius: 10px; background: transparent; color: #dbc8ed; font-size: 28px; line-height: 1; }
+@supports (height: 100svh) {
+  :root { --game-size: min(512px, calc(100vw - 24px), calc(100svh - 184px - env(safe-area-inset-top) - env(safe-area-inset-bottom))); }
+  .layout { height: 100svh; }
+}
+@supports (height: 100dvh) { .layout { height: 100dvh; } }
+@supports (width: 1cqh) { #game { width: min(100cqw, 100cqh, 512px); height: min(100cqw, 100cqh, 512px); } }
+@media (hover: hover) {
+  .session-controls button:hover { background: #342740; border-color: #8a739e; }
+  .control:hover { background: #3d304b; border-color: #a38bbd; }
+  .primary:hover { background: #e0ceff; color: #261836; }
+}
+@media (max-width: 480px) { .wordmark p { display: none; } }
+@media (max-width: 370px) {
+  .layout { padding-left: max(8px, env(safe-area-inset-left)); padding-right: max(8px, env(safe-area-inset-right)); }
+  .game-controls { gap: 6px; }
+  .action-controls { gap: 4px; }
+  .control { font-size: 12px; }
+  .direction { font-size: 25px; }
+}
+@media (orientation: landscape) and (max-height: 540px) and (max-width: 1100px) {
+  .layout {
+    width: min(100%, 1000px);
+    min-height: 260px;
+    grid-template-areas: "stage header" "stage controls" "stage status";
+    grid-template-columns: minmax(0, 1fr) minmax(232px, 300px);
+    grid-template-rows: 44px minmax(0, 1fr) minmax(28px, auto);
+    column-gap: 16px;
+    padding-left: max(12px, env(safe-area-inset-left));
+    padding-right: max(12px, env(safe-area-inset-right));
+  }
+  .wordmark p { display: none; }
+  .app-header { gap: 8px; }
+  .game-controls { align-self: center; grid-template-columns: minmax(0, 1fr); grid-template-rows: 48px 48px; gap: 8px; }
+  .direction-controls { justify-content: center; }
+  .game-help { font-size: 10px; }
+  #game { --game-size: min(512px, calc(100vh - 48px), calc(100vw - 288px)); }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+
+</style>
+  
+  
+  
+  
+  
+  
+<meta name="disco-web-app" content="yes">
+<link rel="manifest" href="./app.webmanifest">
+<link rel="apple-touch-icon" sizes="180x180" href="./icon-180.png">
+</head>
+<body>
+  <main class="layout" aria-labelledby="page-title">
+    <header class="app-header">
+      <div class="wordmark">
+        <h1 id="page-title">DISCO<span aria-hidden="true">.</span></h1>
+        <p>迪斯科舞厅</p>
+      </div>
+      <div class="session-controls" aria-label="游戏设置">
+        <button id="sound-toggle" type="button" aria-pressed="false"><span class="sound-mark" aria-hidden="true">♪</span><span>音乐关闭</span></button>
+        <button id="pause-toggle" type="button" aria-pressed="false"><span class="pause-mark" aria-hidden="true">Ⅱ</span><span>暂停</span></button>
+        <button id="install-help-toggle" class="help-button" type="button" aria-label="使用说明"><span aria-hidden="true">?</span></button>
+      </div>
+    </header>
+
+    <section class="game-stage" aria-label="游戏画面">
+      <div class="game-viewport">
+        <canvas id="game" width="128" height="128" tabindex="0" role="img" aria-label="Disco 迪斯科舞厅。可点选菜单，或使用下方按键。">您的浏览器需要支持 Canvas 才能显示游戏。</canvas>
+      </div>
+      <p id="mobile-help" class="game-help">点选菜单 · 上下键选择 · 中键确认</p>
+    </section>
+
+    <nav class="game-controls" aria-label="游戏操作">
+      <div class="direction-controls" aria-label="选择方向">
+        <button class="control direction" data-key="ArrowUp" type="button" aria-label="向上"><span aria-hidden="true">↑</span></button>
+        <button class="control direction" data-key="ArrowDown" type="button" aria-label="向下"><span aria-hidden="true">↓</span></button>
+      </div>
+      <div class="action-controls">
+        <button class="control" data-key="SoftLeft" type="button" aria-label="左功能键"><span id="soft-left-label">选择</span></button>
+        <button class="control primary" data-key="Enter" type="button" aria-label="确认键"><span id="confirm-label">确认</span></button>
+        <button class="control" data-key="SoftRight" type="button" aria-label="右功能键"><span id="soft-right-label">返回</span></button>
+      </div>
+    </nav>
+    <p id="status" class="status" role="status" aria-live="polite">按确认键开始。</p>
+  </main>
+  <dialog id="install-help" aria-labelledby="install-help-title">
+    <button id="install-help-close" class="dialog-close" type="button" aria-label="关闭说明">×</button>
+    <h2 id="install-help-title">使用说明</h2>
+    <p>轻点画面中的菜单项目，或用上下键选择，再按确认。</p>
+    <p>营业时，左键打开经营菜单，中键开关欢乐时间，右键返回主菜单。</p>
+    <h3>添加到 iPhone 主屏幕</h3>
+    <p>用 Safari 打开网页，点击分享按钮，再选择“添加到主屏幕”。</p>
+    <p id="offline-status">首次联网打开后，可以离线游玩。</p>
+    <p class="keyboard-tip">电脑键盘：方向键选择，Enter 确认，F1 经营菜单，Esc 返回。</p>
+  </dialog>
+<script>
+globalThis.DiscoAssets={"body":"data:image/png;base64,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","floor":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMYAAAAMBAMAAADLxt+8AAAAHlBMVEU7Zc5pwvf/zQz/pwD8/s9Zg/L//wCZ2PtZofL///8Z7d3IAAAACnRSTlP///////////8AsswszwAAAUpJREFUeJyVlE2KwzAMRrXxoktfIYEcYHIFM7P1RtB1KN4PDLgXKNUcIbcdW5LlNE0Lo0XyIsL3kPIDay1cregfOB+i7xj4CKxAkxDREfYbEK07f8wH6L1JQgjNgWgSIkve4hkhCjrAG7XcYZyf0PvcJCGIBFQhEiJLZrgL3tBF4IkBXMQzae6gyRssiqySEFQCTVElRCYpKyHKvKOiiBFYUhTgHEtq7iTJrBBkRc7f3hRFAtiLevHlVU51CgdWkSdhxcTJqqioijpJ6PXGgXLcKVTCCpGMY3OMTVEkW8fLXaGoCkYNr7vicqVbMpe0LMPAKLWu5njY1atnLlNxF6IqVOIYyxQpTVNFU5hk98zfvbt3QVM8YCp1EayGSbAafp7e3f03+GuYW9dyGU+Kn5fQusuQGn5l626+wVf/kmtH2ODJMPRuWo+6gn9VCfnfWBaDZwAAAABJRU5ErkJggg==","icon":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQBAMAAADt3eJSAAAAGFBMVEUUFBTZzAC9AsiDdgDPz89zc3PaYt////85J9AzAAAAaElEQVR4nC3MMQpCQQyE4V98sK3eQBa0FryAxYjta3IEUz8ewl7fyeI0+ZiQ0GduSR/DyOSytSqMvVVhjLZf/9gWClTiQ4+nsbwIcTiftCJxfNxXgebKmHoHHb4aEaTlKeqpTyfSp/oBcI8arrT8IygAAAAASUVORK5CYII=","legs":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAWEAAAATBAMAAACzTKGaAAAAMFBMVEUAAAALr+2wgU2FHG///wDyjgCuZgI4asT5yIX/AADUPMgAM5ny9vanp6fkrGH///8PS+BwAAAAEHRSTlP///////////////////8A4CNdGQAABB9JREFUeJyll79rI0cUx4cIybF+3NxxxRV3lQNXWoQFV8J7hf+AFOf+kGFRZaRKTdxIzVZO2sAVql1dt4UaB1cHCrhLs2pOEFQtAwNqJ/Nm3nszkmI5IQve/Wg1O/rs2+/MjoUxRglhcHsSpTm0Rd9Hlz3RlBtH+O83JfyVkj8HnA+51bw42LP6ePGBuH5xIff7Cmh/rCn28H8ZUx+t+SjIFy8P9nJ5+RMbX16S8UnFHZxUt+EHxGwX/6uxEs1gPCNuFSPSVPPxQWPTWdxzjyXx5mRdGcb820FjfXq7Clj98JxxuFUxI1bFGypya/Ss8YLvuWTOTquuIczzLmv6RxqhMWenbKn763ySHjS2seAiW2NkVYzJszUejw4HuQxFFqHI/XxiCPuDnDWbcgetcZ8tdfb+ff6sMRdZ3PFDK4bjIRkfjQ8bR0UWzJuqn2ORN1V34+2jwm7VOOvnWGR9vUoGT8aCUhEZSxx7dq6g2aJVtGiyiNRifCyJ1ZJ5M+kOfkHj2y66qaCpYuNJMpii8WCl0Vhl2RWZZlnKxkKEsWfnm2Bc7Bu3/2DNgGopeex1loJ4cGKwsGbwzZBbUp1Xq10ExTOMxdltanoPvkUjNr5K0djOD+EVIJo89GwWyKhg+X+scWchbWl90zLwoBuMu2x8nk/X013cMp7Exr6yjrIVGoOtCjWm6U3NR2TcKl6OyLgMxmUphbe0Ne3co7yAG3CnJ10cJ4BIRld5QpoBN9ZSL1Ivb8XQWGWfgrFw9bb9QIntjqJla4zu8xG/TIKxWpY0K3QsPmKJyRjkFbYQ39HIBlR4o3o91et0F8GQjOHQe43GaQMTVMvSGhpbR58M2I7tJ3IveEZrjdnYHN2QsRjf+Fx4Y4dbxjIYyygUKWlGCIb6d8c9OPT86caVra3H2sqjM5bBuM2zhjV+xTF+NWRjcYSxUI92jAJ7ww7L13GR4aYhSRgZn+e7xk5WPwT5d6kv8cr+uQEH8jUIcjD26T3mdcW28ZeCflGJtiuhEH9KdVTCtR/B0HvW7TKo7hcZKhj70eKv/35qzqeM+8YuFPqdSwUUFSc4BXiNxv7peaN2bPyGsHj7hc+LUjjNcmEzrH4GdIZ13EvItyRZnwpAiWPQrtaEDx6g8os3F1ufCv0Axgtg5Vwb19fEwqfi+Kutmfr8+VdX47Y/gtp8SMPREi8GyoU3Xi5tTtSNQzjRwf29e5UZjAG+UyXtjJ7ZV9TdjFA17yQbLxKDMdave84SXBt/VcwGjb9KMP7Nddv2R/LcN14+2vcFPxR6ZRr0hGZkjN+ZkAjQasKE7zQBVRPGvUmcptv/6HKcavB74WPgrn5RsbFzUWQkttbeYekdlqPS7KzCd43xtHRpc43l1r8odPeAuB5PEzB2+0QnUc+1iPH4Nx91yaGkS3/6AAAAAElFTkSuQmCC","light":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFcAAAAcBAMAAADmeT7wAAAAGFBMVEUBAgN4ham7yNvw9fdTXY2uuMscLmL///+WNIGvAAAACHRSTlP/////////AN6DvVkAAAGoSURBVHicjdNBb4IwFAfwkpB4pbTTM61mZ1uTXVfs4ANsyc4uRK4iaL/++l6rLs7BmmAw/PL67+NBHKxz+DVPQuNSK1qlNs0ozQ6EwLPaXwfyA+M6ah1uCEkSf6Umu8P79ool267xJrUkIyxJLeLFI3xc9ycNZVwCOLngzysebvh90bvj8lqZRDwsIz43O62qwLul610n6kvlCz6tI95t1/xLBl3WHrs3SJhwwKEbndQLxA0rRM4N28Nu3Kf2e/EWujFLKJ2Fk1wwU0IUlJuNB0OL2Fk8oos9xn4W8HeQUihBqS09hCgneNrG7lmsbKR/UUV9II3yWFFjdlWo0t1eUIyBVuvVK9nC28Ugm/YeE5/7WvnDV2ZSgja2ikEH93v1Wr9AZtwCQvM8VD4/wC7iMGWqoHZeP2JhSYWtUxBDi9yM4u7Z3SpLwO3fOA5SnHbfjnIaS7/ggKbaj8SI88xC6YKa+WIEO8QlWpHT8cwBN342tMqpsc2ExUHCygXNxyJH7CoNlbmpplIAHpgWgpbCTtn4WQkqxX7Shg/W5qya/xM713A+TT3+Bhb6wFUW4Tr/AAAAAElFTkSuQmCC","numbers":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADcAAAAGAQMAAABdM5QNAAAABlBMVEUAAAD///+l2Z/dAAAAOUlEQVR4nGM4Xzzf2eBcHcO23Lx7/7buY9hee/eY3VkgXfy66u42O4bt+RlVt7fvYzifON/d+lwdAGqYGXYxM9a2AAAAAElFTkSuQmCC","player":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACMAAAAMBAMAAAAaDRmJAAAAD1BMVEUBAQHm4Mj/AHdqaGr///9pEYxHAAAABXRSTlP/////APu2DlMAAAB0SURBVHicTc7bDcMwCAXQS5wBgtwBMkIsMwCRvf9M5RIrLR/IOpgHZsQw5unYM1NatXwLjTQuoJg5tpMWNBoi1OYyx2gHWpWaLdvJ8q0Hei+iH1rGJZqNawMbY0+Y1J6HeI6n6ZK57vL3z0uRyk8e4oQ/+gLEUCPq9ezyIAAAAABJRU5ErkJggg==","softkey":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAkAAAAFAgMAAADqPS74AAAACVBMVEUAAAD///////9zeKVjAAAAA3RSTlP//wDXyg1BAAAAHElEQVR4nGMIDXVgmMDYwLCErYFhpVQDw6qsBgA2cAX9oPJzYwAAAABJRU5ErkJggg==","stage":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIQAAAAcBAMAAABSXwq6AAAAElBMVEUiLXCNxvAxW6UDA/////////+HkLxKAAAABnRSTlP//////wCzv6S/AAABVklEQVR4nO3TUW7DIAwAUNQboOQCccQBIicHyAoXoPH9rzIbU8KSBWnRPvYxV6kQwa82UANUh6VAFJHDEW0y41PIaKvWyao0cBQN1IZl4oVoORAXyfH6wn9POHIRmIBKsPQUwPPH4lylhTPhiDPBOVMZnAv0tBp+tXMqP4T8+kQAI/yY3RABXqstRr/wUl/yD4SkRUk1xUhCRVjf825soSSdCN7xqFWooQKMO9H32CD0d6UMk41BBRhtFVj6kDa+EKCEPCbXMahAMBVg7bpL4kMWOzlVIdQYVOBrVRWxXFchLTgdG1LjkSuLYzFwYiJcEulavAnKRJoAfN/OFXfgTOwX0ui3EFQIiWnuhLis4kgQE3mCO0nRzd3SItyRoMd7IhMT99Ei4j42dAzIBvfRqqJFRDX4SKm1nS1CTjwLt4n0J8S88lYjddyvolr5C1X8jUb+iR8Rn7iSDzF4Xs+jAAAAAElFTkSuQmCC","symbols":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAFcAAAAPBAMAAABjO07FAAAAD1BMVEUAAADghDL//wDu9vj///9r9z2FAAAABXRSTlP/////APu2DlMAAAEGSURBVHichZGBbcQgDEW/EQMAXQA8AVIYwFW8/0z9TtL27tJTjUAGPT72B+6eOd1wLMyNCZhs2/LlXCKWf9ZCxHrsRMklZZ6yW+NuYvrcfb9g+5hPsA1t2XhB4tKMQfF1gyGKLF1TT62hKfAN+6L2WuuEU2jqqNpFVQkLatWyzRgXvG+HMpAog9p0FGHNvNENGPmEWfO+HTEJh5pq5sudZSB1tJY9FToD0CK68avMxlVL9N9j0ZwSmxyHnVc81EzpEWZV9im1cD8yhV/icsM0fLIm/fwUa8V6fgMnjR844SMk2439gau0J9hu5Hlc2eCASX+E34UUGHuJiT/efpHGyeAf7qK/AKxtfUx1lrIuAAAAAElFTkSuQmCC","table":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAALQAAAASBAMAAAAApunyAAAALVBMVEU7AG4ApMuoAosAbHmwssdVVVXa2e5ZGP//b9ht3f8qKip7b///kP7///////8wjU+yAAAAD3RSTlP//////////////////wDU3JihAAADEUlEQVR4nH3UMWsbMRQHcBHaJiRguMEBLxkEhRuCwRwdPNR0OC+GDIYopIIa6pCjdOoWaKBDB3OELKbEcFspUWpkCtk6eOtQQsfGq+Hw4VWfoX893dnYTfuWhHvop+enJzHDTBFnhmmtpdCjkkkZAt+WWW54L0Z87FXNjCPwLVhkPZN5Nir3xmQBAkvTs2J1OP5gaa3kqJRuno/HITMpL7JRXOW9C6RBz/Z/RtGUmywp7GmyV/OkUsIbNLL6ANkANMvtcGxppbQWo9Lme7tJVEp5bkcx6EulpP7Sq+7f2eqn1czL7WkCumzLag8a9cTGtGF/N9mQx9+ZFkJoNWLbVL5+scGdHVmLXyIrdY/7+J/H8e+a52zISb8mtUBZg6BPnUnuWW5bmWiNxTmt9a2lYUfUZH6BbQXRCB53ax7ZVra00E1Le2WcV7tywpz9aJzTRypSao3mT+KcPlSvWhK0bUjsE+0lz6kB/bo81BOpQEusFAXNzpf0kXBVo4iC9he0Fk1Lv9FCHee0lyR51chKVF3GIGj1sqB3CjqSy4bIv+hQuob8sidR0JVF1S1hqy4reS0foqNTV7XdWd+yNfpgImzVtuX6uBus0tcHTUe3vjU16HSVPopOqWolbyTodK0hYUhVY98m6GyFLmO8dHsQXKmWEmpBu2O0VwZp/RX025tT9DqljuwTXeUxsnJ4CbqlJnLYzagju0Tv1V7j+BQmpqxC/CjQZkmflZgbDKKxs741bEHzEo/tbYyJxokdd02woL1GUEn6fTuMVzqcrNGY7pTsz+/SbcygnRBkcxrTPePUlx8zX4Wgh6CDnPYCvBzUnk9ZH2ctFYbPmLzX9k523KE+TrdxnkST7ZNsOtR4/nTmy3DatDTZFZJNJ6B4lu3aG98m2hBNt30+J3kOGjsTbe0tkpEleT7zLxSOxO8asuskI0vyHA+LbYyjsXrHvVGdPNLiNrrsFl/Jzvw75IZEw66TvMgaV3294d41tun+zl2YFdqwjdXsrLjo9DWoBStZPLU2ToqnfvniPxT/zwb/+P4H950WvaZk4fkAAAAASUVORK5CYII=","title":"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAIAAAACACAMAAAD04JH5AAAAPFBMVEUAAAmVjoGaB36CRRknYzdaBXL51o/cbRQyKya/BbXQUMTumyz7+fmwX7fUOX91NW7smuBdW123uLjsbNtyQXyLAAAPQUlEQVR4nO2biZarOA6GDRmCABsMvP+7tn5JNjZLJdXL9JlzxnW7KguJPmu3TTv3//G/OojWlejfk796Geu/B9BABY3fnFsWfvrf1UaWRbQ1+mBjdWzNPw5Bi1u3Qu2rSlxX/tcwA9Ms/xwELWFctq3SNZVOsMInaA/L3yjU50EhxBCo9rrTbAkuEfZ9/KUa+r7/DLDvMawniScxbAgGoHHnsXTfy6f+/X4iqAEchTv5hU/mh2EIX2uB3m//RODzgz1GzGxMoorpU4IwAzUrR6VbvjYEAzyqwLPrQW4G2MehHYbTF+QHiiEaa1YXxu/sABM8Efg17Alg341gOBOkoVFJSFGSJcM4fIOgAPcE3sTqA30yD8NTpFH+tXJWIMewXxBQryq4WoxYbkwaSABjCG3HoxJafwwZkaRQMEH72RMSwfn1JZwBoshfIL9blq4dCk1Q6Qz4tXFMdrDXZyVQP03T+5wNlhiz72WAwPKXReV3Xds+fSXcgQHc8C0Bj/dUEYRGw3/f7QHPPaj8DNB1d3ZLAHjUCsEjZ0Uw+QqgsfyTH7DwNazLogQqv/s4ORCM4+fywPLfviAIFwCdex5dYvhhVvYnjF8QkBBkRwwmWO3PIyn/CnBjhfJ7xRashE8EApBDQbIPHuzpAfR/AUi/znMuxyZJsR3HT35AADAVBEt6GgIWfFcC/m9Znu2ghQEZiTNC9zEWVAUTImEx8YQRrQiNFgS1IZbsi3VPWD6BKekzgcQBRr8k6b3kx5i1MY6CcScfjkB1r3T8JdFB+w0BHHHqRX6v6fE9UWkOzYRX+ZeZF8WapDySe6xhlQrgBqV8fwAkx0i2CIUB6m+qTIAmga2wISv+7IgkAG/f97tmRgEo5RtD4Q7+h1RQGkSMwCp4DEbSMcmce8oAhwsUStA/MQPg81eIyikRCtSxCz3AahJgweiOfG/uwINiBZCi0gAkRTLAsxqkW1t1JcftwfhkBBHn/RuTh99JPIDokGcAMcuP7Axmgns/TI8TgHQHD5HQm/khlzgS1f5v2qsRZRTaGINfLgC3o9mE5bGb61MSQC4i+cMPbgEqf8jdCafFHwHSeCzNGQC2gmzJAHQRX8mPe27QEJFZ54+DhOBWV6+sAf8m1T88IJ7EVy65p8zUdpKUIOGhu9cFw+rpMRlYGEo5uALELP8uKLRHFRv00/2804pFCO52NdjrvHidDAOg/hR3NwD8wpib1AeAwzAcC/z4RgW9AHAYvmGEpAKaQxl3NU0GGosm1XEAwY73dkC/jh2EYbioIOVd8T6fvKDHivwk/+KVWpu8ArQ6gzcIXlcNUFosXCImZ344ocbBG0kpVH4fr+KjVQWv/dn8TtZjgOmQfdTIzXNCGMMZQAh6iwIDmAzg5POnoECHwIHgNQqT90AH/cUS6BdW2MBdI5HuAWL0deD7k3zl8wzguX2cD4C3my++wCs2XushJd5FohZDGRoG/DcCoHJ7X+iiCAoken5hLgice1+dkTvkzTPFMF4TlmQiKsKQG5EzgK4Pimokv3QHieF8VgF/RePep5WWOCF3RwJwzYZajsQEGoYA8Dv/xEoDsZKfyYjlQwOgRwYXgrMKVu7PCWEwXHt0MjeECwgAl2SS2VWe57PSSwC/0475iwlY/Mw/9JakeiJY2Qs3Kcs3PqBuiCYM9qee+5K8P1W4njwqNkxkaN8yh40wfeacTYu6MsoG4H+igWG4OAF1giCuyL8nP6EdLDVQZuJyw0QA5DlbgBUwszESwFTvZEKqX+m2JBK39lKNRDyq8oSGEF5QBV4COKIBf6Ruj2IB9Y4McFIz2tP7rkBKOkkkcF2Q7ugN1zIRp2p4bJjoL5pZpggleO2cAciVG9jbqpupDHBJhlLSX9TrCk0IxAaFv98B2AsE/yevCtj3nJOm11EJVQOrAYxXDUhJp5mbYumMtSf399XQ+RJoJA4c762LVG+YzgDmA7K/P3ACP3uhlXSsB0X41EtD8lANDwBMH6bXNtK6yDFlJDboqr7XJCdcUQ6vCwSyfa+US3mB1svK+L4ayuZVkg/RHDpGMI9FUZjE76o9ZW8Ayz1Aa60AFik9VR1QGfjYvjMA/QAAdCUzz0VJmJLwNQNsEoUXALUAltnWi0hS2EsFZAbZM0pBkbK/rSy0q8slqehKUlNCBtBeAXTbh0T5c99rPa6r4V5smqn8KbUgaY+nGpTyELvpsX0H+edEkJY3DMGqT016pQJzgwIAq/iLzHK8yA6Y4KPaG0k74MdLNcgAS/cimY0ADON1bWi7Z4cDPo+0T4T0MmULkB/GyxKtPQAsI8pXs7YqBYhJcL0pQHaVHuX3yQDwJwGgdbXjhHMmGtpW5cu+iwIgscFfaoDSHwBgrdQdwIwjJB5wKFkzESzAAMM1FaI8tAbQCQC+wQNgmKv5l0GBDLRi0J0tGsxX5ZNqQM5XWz/4KwCM0uZ9pzQj/9bd7vFhbQgAUei23SiBdA3WcFZVE+hBUxAFnKtRsftVAZACjKdqeAZghAsBEdIvzdLm0pRy8aIA57XBqFs+B4F9y6RBK2Y4A4yhAGCCOiQbOXEj2/JAYZaW6AkAm7PjDcCbxnE0M5zXhiHwZRTgvHJMRratYR8UB2gmG5QVgO/DhucVYNftDvHCrE8y+RyPp7Uh24wXo++g8etjox+akgc2dhJTyReA/aYYyfZszBsudKRVMvnDOFbycbFs5lAaU6GBBvNX1ecdXJHPALqguwU4TqoPAJcB6pSAfUoH+9qC2FKXAYhUmfsrF2OSA3icXozDtR/At5Zn5RcNwBLjvO/WjKnPaisypf2twwL4Tn01F8RCPgDcFSD+CJCU4PMGmQLUuyoG8MryAUBZfgLYx8vKZBQNpGcHgC8J4JBptZgBqmpgBkgByPJflQOo/DFe12Zh10ZLNPsM4PFjMZAALoO/bp6m0gKk8heTfwewGIDs+bjCCz0V8pkAhcxi9gHgxUvt7BjHIcZyAMSbTWvardMLArDkTFACFHczPAM0h1tK/ktBmOTPwnDdIBgfAMwN/aDw3oppHJ8AXoX8Y2km8gGA5et4CQJ1Au11DaCvC5I3+YMWU8Z5ApgqBdiQAzcASNxcErFcgqPqA2BJW9b4gFachKBjFoBpbX6Qf+yQbHLWbk003R6kUmq2pelclllznJ5mEqZdAwwDAAj1/kH8YYCm84tvGVorJt25gB7vWcsJgEUbPtMCec0CwwGA/oV4wft6Em/y2d9RLXGIrSuWnu4soIcacS8A+iPBQge5LJYA2HNq7qTzhzXU+aLGYmdIG6Dx9nCBvGxzOJMPgj4DALsGUCdcfd6drOVjdWMA2MpF9hhUp7zgerzFSJfe6VMFAK+9e6rEaxTwet795276mvks/y2euyA/qkp7Ck8n6emETr9aavJhA+nRdV1nOTHYIUVTA+jU8c6yoCfqJP78CP2LYjgdPSkglIUuaeAAkDM8ssqMW3kEYJ5qACJt7IxCexCuIM7iqVue77brbDNWCw26ePcqCbi9Z4LkC9q/5cOWNI5zZWcqQv7ztogi/sgPN5kFBUA6ds3GC45mdUdVwrI57jMlJ2zzglJPWmUUAJr8tALbphUAfjpf04zHFXHB+RLuGV15cZEjQRbsvBooAKTPoBmrHxkzuSS5qH6ceOwc7tMtH8E2Y2lzcpPm1mx+S1XBdvBNB7zC5+/ClmDbthmA2ll0ENQeqfyKfHy869ofTzhplIaHV9VY87H0Zmt8rksGsKNC4x4tXvZAOgD6A2DH/SZmEyIU/2gNOwCeb33SscgJCC+ridam8RuWfVuKBUkiMc6R0x/W9zurXgHokD/DTy3kZJtnHNPyQOR/uvEo4Aa4RhSwbZZCVyOwbSNsRqOqz3y5qoCmQgECUBDws5QgXuGTAmAE3AOIhZzdO80Ya5Ff4QMzDihYPmzPAE6Ou03+GCVSedbvTCUJderVLT4BsBGGzi6zpbdf+yw/2AKRHd+xunfaW2fvcf6FAbCLIwTvhCUncmnl9Hz/bGEEEh9EqfeNaKCX6gYACJhxQsFzx4qZsCurxW+CAsRHdwrih2+TP9mhsJTCzwDwL9lZXu2m2i1nGQUQN7CszXFAogAkYZGPH4vEd9Kb1RRVyUcAl1MFOQ7Dzbsiz0E4R8GcVukCYAe+sxoAGxdWS0Rsj/Uj0qjSvH4WniTLWB0M0Lgiysr9AYgDgFUigvyoK0enm/+pnZpwd4iq4yv5x2D5DJPi3LVp5naOgZzZTnI+xb7ezj5toVhDkQB07//LKDgU4PScs3OIdHzymOKupygwd9vrOaukAHWNyBEqlTCdJeu9CVLQ5i984IBs4IwLANIbcldHMY2A5C9lJm9GAw0A+TBbstKEcyhxhS8I8sat3h0DFVC+aS1S+bYTJ8B5fb4AOii+q5HTv9RffxcGrgu2JxeCERBe4n+dSAp5067jakBvMOm9BvyCtJV2TcDdPbsAHLH8FcCxVRGEQF4KXu9bOt7EbVStiM8voESVl4RO7uPKAF+FQQmg92plgLaSz8+preQxwOnjTKB58usgUIAO6VS/qqs0gJ6pS3f0KYDKsRdcF/Ml9lD6Ru2YvgewWcgda92hAfl7zBBZs/PFS52ao7Mdt9ipDlJW/sYBagD56qBfKwD8zaXGDe3wAVFReYVi5vbgNwA6mZDnZQAxOaMGaWfX2JZphg+IBH0vdPQbF6xc3qdHNUAIKs/tuMQYFSjK8yitlz3BfscvxFcAQZQYulIpScH8Kg3HFerkiQeLjNnlCdC32q8BnM0vdmUUxGTxeMwYOZL70dkAgpMNxcaFDPAL+QUAvh93bhQA0WevxOvpAiflUQDwz0U5+E5Pf/F/HX0AKLKOWb4A4DKQAfSWl78MIBovTYA0Hw+CKM+iSuR++QAYVSHhbwAIpRMi03aS5bwKPq6NCUCDgIHeh4f8SYCUdwoAyqecVVjEJKNLYPJEFfgXAKDfWOWBPMqwUCvl17ucF7zx/05+AojRcmks5KVewNtM25yctR844lSvCfH3CqhqQXctRkWaj1afc2io1o7aEEJhnt8DcEvjrSe5AMSEpuUvZAD9iKqoC3/CA6wfEHtGy3fu1gfsLa36VoycZYqQrvkT8uuWRvq6WxMcvl42CK47NU1/DSDa5+8AQg69Izl11rYW1/xevutSy2VKtZc6eSEU7x0fSG90+fn5mt8BFJ3/9aXTW/X7p+cfZf0BOLyxkKy7TMYAAAAASUVORK5CYII=","font":"data:image/png;base64,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"};
+globalThis.DiscoFont={"chars":" !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~、。一万三上下不世业个中为主举么之乐也买了于些人今仍从以们件众会传伤但位住作你使保修借倦停偿像元先光入全关内再决况冷准凑出分刊则创初别到制前力办功加动助升单博卡厅厌原及发取可台右合名后向吧启吸告员和品响商善喜器回在地场坏型城基士声备复外多夜大天太女好始嫌子存学完定客宣家容对封将小少尖尚就尽屏工左已师带帮幕并广庐度建开引张当录彩彻得心快态怎恢息意感愿戏成或战手打扩扭批把投护报拥择持指按挑挤损换接控提撑播收改放效教数文料斯新无时明星是晚暂曲更曾替最有未本机材束来果染标校样次欢款歌止正每气氛池没沫法泡活派流浏海消添清游滚演火灯点热版特状猴玩现球生用申电画畅界留登的目直看知砸确示离科秒稳笔第精素紧级纪纳纸线经结继续维缓缺网美翻者耗聊聘聚能脑脚自舞色茅获菜营著行表被要观规视览觉解计认让设访试该说请账购贷资赚起越足跑跳轨轻达过运近返还这进迪选通造道郎里重量金钮链锁键闭闯间闹附雇需面音页顶项顾颇题饮首高！，：；？"};
+globalThis.DiscoMusic={"source":"Static decoding of original Nokia Disco MIDI resources","songs":[{"file":"title.mid","format":1,"ticksPerQuarter":96,"duration":8.0,"tempos":[{"tick":0,"time":0.0,"microsecondsPerQuarter":500000,"bpm":120.0}],"programs":[{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":2,"program":44},{"time":0.0,"channel":2,"program":44}],"columns":["timeSeconds","durationSeconds","pitch","velocity","channel"],"notes":[[0.0,0.057292,42,99,9],[0.0,0.119792,93,99,2],[0.0,0.244792,33,99,0],[0.0,0.244792,36,99,9],[0.0,0.244792,67,99,1],[0.0,0.244792,69,99,1],[0.0,0.244792,73,99,1],[0.125,0.057292,42,99,9],[0.25,0.057292,46,99,9],[0.25,0.119792,45,99,0],[0.375,0.057292,67,99,1],[0.375,0.057292,69,99,1],[0.375,0.057292,73,99,1],[0.5,0.057292,42,99,9],[0.5,0.119792,33,99,0],[0.5,0.119792,93,99,2],[0.5,0.244792,36,99,9],[0.5,0.244792,39,99,9],[0.625,0.057292,42,99,9],[0.625,0.119792,45,99,0],[0.625,0.244792,64,99,1],[0.625,0.244792,67,99,1],[0.75,0.057292,46,99,9],[0.875,0.057292,33,99,0],[1.0,0.057292,42,99,9],[1.0,0.119792,93,99,2],[1.0,0.244792,33,99,0],[1.0,0.244792,36,99,9],[1.125,0.057292,42,99,9],[1.125,0.057292,73,99,1],[1.125,0.057292,76,99,1],[1.25,0.057292,46,99,9],[1.25,0.119792,45,99,0],[1.5,0.057292,42,99,9],[1.5,0.057292,73,99,1],[1.5,0.057292,76,99,1],[1.5,0.119792,33,99,0],[1.5,0.119792,93,99,2],[1.5,0.244792,36,99,9],[1.5,0.244792,39,99,9],[1.625,0.057292,42,99,9],[1.625,0.119792,45,99,0],[1.625,0.244792,67,99,1],[1.625,0.244792,71,99,1],[1.75,0.057292,46,99,9],[1.875,0.057292,33,99,0],[1.96875,0.057292,73,99,1],[2.0,0.057292,42,99,9],[2.0,0.119792,93,99,2],[2.0,0.244792,33,99,0],[2.0,0.244792,36,99,9],[2.0,0.869792,74,99,1],[2.125,0.057292,42,99,9],[2.25,0.057292,46,99,9],[2.25,0.119792,45,99,0],[2.5,0.057292,42,99,9],[2.5,0.119792,93,99,2],[2.5,0.244792,30,99,0],[2.5,0.244792,36,99,9],[2.5,0.244792,39,99,9],[2.625,0.057292,42,99,9],[2.75,0.057292,46,99,9],[2.75,0.119792,42,99,0],[2.875,0.244792,73,99,1],[3.0,0.057292,42,99,9],[3.0,0.119792,93,99,2],[3.0,0.244792,31,99,0],[3.0,0.244792,36,99,9],[3.125,0.057292,42,99,9],[3.125,0.119792,69,99,1],[3.25,0.057292,46,99,9],[3.25,0.119792,39,99,9],[3.25,0.119792,43,99,0],[3.25,0.494792,64,99,1],[3.5,0.057292,42,99,9],[3.5,0.119792,39,99,9],[3.5,0.244792,32,99,0],[3.5,0.244792,36,99,9],[3.5,0.369792,91,99,2],[3.625,0.057292,42,99,9],[3.75,0.057292,46,99,9],[3.75,0.119792,44,99,0],[4.0,0.057292,42,99,9],[4.0,0.119792,93,99,2],[4.0,0.244792,33,99,0],[4.0,0.244792,36,99,9],[4.0,0.244792,67,99,1],[4.0,0.244792,69,99,1],[4.0,0.244792,73,99,1],[4.125,0.057292,42,99,9],[4.25,0.057292,46,99,9],[4.25,0.119792,45,99,0],[4.375,0.057292,67,99,1],[4.375,0.057292,69,99,1],[4.375,0.057292,73,99,1],[4.5,0.057292,42,99,9],[4.5,0.119792,33,99,0],[4.5,0.119792,93,99,2],[4.5,0.244792,36,99,9],[4.5,0.244792,39,99,9],[4.625,0.057292,42,99,9],[4.625,0.119792,45,99,0],[4.75,0.057292,46,99,9],[4.875,0.057292,33,99,0],[4.875,0.057292,67,99,1],[4.875,0.057292,69,99,1],[4.875,0.057292,73,99,1],[5.0,0.057292,42,99,9],[5.0,0.119792,93,99,2],[5.0,0.244792,33,99,0],[5.0,0.244792,36,99,9],[5.125,0.057292,42,99,9],[5.25,0.057292,46,99,9],[5.25,0.057292,67,99,1],[5.25,0.057292,69,99,1],[5.25,0.057292,73,99,1],[5.25,0.119792,45,99,0],[5.5,0.057292,42,99,9],[5.5,0.119792,33,99,0],[5.5,0.119792,93,99,2],[5.5,0.244792,36,99,9],[5.5,0.244792,39,99,9],[5.625,0.057292,42,99,9],[5.625,0.057292,67,99,1],[5.625,0.057292,69,99,1],[5.625,0.057292,73,99,1],[5.625,0.119792,45,99,0],[5.75,0.057292,46,99,9],[5.875,0.057292,33,99,0],[6.0,0.057292,42,99,9],[6.0,0.057292,67,99,1],[6.0,0.057292,69,99,1],[6.0,0.057292,73,99,1],[6.0,0.119792,93,99,2],[6.0,0.244792,33,99,0],[6.0,0.244792,36,99,9],[6.125,0.057292,42,99,9],[6.25,0.057292,46,99,9],[6.25,0.119792,45,99,0],[6.5,0.057292,42,99,9],[6.5,0.119792,93,99,2],[6.5,0.244792,30,99,0],[6.5,0.244792,36,99,9],[6.5,0.244792,39,99,9],[6.625,0.057292,42,99,9],[6.75,0.057292,46,99,9],[6.75,0.119792,42,99,0],[6.875,0.057292,47,99,9],[6.9375,0.057292,47,99,9],[7.0,0.057292,42,99,9],[7.0,0.119792,93,99,2],[7.0,0.151042,52,99,9],[7.0,0.244792,31,99,0],[7.0,0.244792,36,99,9],[7.125,0.088542,47,99,9],[7.25,0.057292,46,99,9],[7.25,0.119792,39,99,9],[7.25,0.119792,43,99,0],[7.375,0.088542,41,99,9],[7.5,0.057292,42,99,9],[7.5,0.119792,39,99,9],[7.5,0.244792,32,99,0],[7.5,0.244792,36,99,9],[7.5,0.369792,91,99,2],[7.625,0.057292,42,99,9],[7.75,0.057292,46,99,9],[7.75,0.119792,44,99,0]]},{"file":"title2.mid","format":1,"ticksPerQuarter":96,"duration":9.142864,"tempos":[{"tick":0,"time":0.0,"microsecondsPerQuarter":571429,"bpm":104.999921}],"programs":[{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":0,"program":33},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":1,"program":2},{"time":0.0,"channel":2,"program":26},{"time":0.0,"channel":2,"program":26}],"columns":["timeSeconds","durationSeconds","pitch","velocity","channel"],"notes":[[0.0,0.065476,44,99,9],[0.0,0.136905,36,99,9],[0.0,0.279762,36,99,0],[0.0,0.279762,60,99,2],[0.0,0.279762,67,99,2],[0.0,0.279762,72,99,2],[0.285714,0.065476,44,62,9],[0.428572,0.065476,36,99,0],[0.428572,0.065476,60,98,2],[0.428572,0.065476,67,98,2],[0.428572,0.065476,72,98,2],[0.571429,0.065476,39,99,0],[0.571429,0.065476,44,101,9],[0.571429,0.136905,37,99,9],[0.571429,0.422619,60,99,1],[0.714286,0.065476,60,98,2],[0.714286,0.065476,67,98,2],[0.714286,0.065476,72,98,2],[0.714286,0.136905,36,99,9],[0.714286,0.279762,34,99,0],[0.857143,0.065476,44,96,9],[1.000001,0.065476,44,67,9],[1.000001,0.279762,36,99,0],[1.000001,0.279762,63,99,1],[1.142858,0.065476,44,38,9],[1.285715,0.994048,72,99,1],[1.428573,0.065476,36,99,0],[1.428573,0.065476,44,98,9],[1.428573,0.136905,36,99,9],[1.714287,0.065476,44,101,9],[1.714287,0.136905,37,99,9],[2.000002,0.065476,44,98,9],[2.142859,0.065476,36,99,9],[2.142859,0.136905,34,99,0],[2.285716,0.065476,44,98,9],[2.285716,0.136905,36,99,9],[2.285716,0.279762,36,99,0],[2.285716,0.851191,67,99,1],[2.285716,0.851191,70,99,1],[2.57143,0.065476,44,75,9],[2.714288,0.065476,36,99,0],[2.857145,0.065476,39,99,0],[2.857145,0.065476,44,98,9],[2.857145,0.136905,37,99,9],[3.000002,0.136905,36,99,9],[3.000002,0.279762,34,99,0],[3.14286,0.065476,44,73,9],[3.285717,0.065476,65,99,1],[3.285717,0.065476,69,99,1],[3.285717,0.208333,42,99,0],[3.428574,0.065476,44,99,9],[3.571431,0.065476,42,99,0],[3.571431,0.422619,63,99,1],[3.571431,0.422619,67,99,1],[3.714288,0.065476,41,99,0],[3.714288,0.065476,44,73,9],[3.714288,0.136905,36,99,9],[3.857146,0.065476,39,99,0],[4.000003,0.065476,41,99,0],[4.000003,0.065476,44,99,9],[4.000003,0.136905,37,99,9],[4.285717,0.065476,39,99,0],[4.285717,0.065476,44,99,9],[4.428575,0.065476,36,99,9],[4.428575,0.065476,44,69,9],[4.428575,0.136905,32,99,0],[4.500003,0.065476,36,99,9],[4.571432,0.065476,44,44,9],[4.571432,0.136905,36,99,9],[4.571432,0.279762,36,99,0],[4.857146,0.065476,44,99,9],[5.000004,0.065476,36,99,0],[5.142861,0.065476,39,99,0],[5.142861,0.065476,44,99,9],[5.142861,0.136905,37,99,9],[5.285718,0.136905,36,99,9],[5.285718,0.279762,34,99,0],[5.428575,0.065476,44,99,9],[5.571433,0.279762,36,99,0],[5.71429,0.065476,44,99,9],[6.000005,0.065476,36,99,0],[6.000005,0.065476,44,36,9],[6.000005,0.136905,36,99,9],[6.142862,0.065476,44,61,9],[6.285719,0.065476,44,99,9],[6.285719,0.136905,37,99,9],[6.571434,0.065476,44,99,9],[6.714291,0.065476,36,99,9],[6.714291,0.136905,34,99,0],[6.857148,0.065476,44,99,9],[6.857148,0.136905,36,99,9],[6.857148,0.279762,36,99,0],[7.142862,0.065476,44,99,9],[7.28572,0.065476,36,99,0],[7.428577,0.065476,39,99,0],[7.428577,0.065476,44,99,9],[7.428577,0.136905,37,99,9],[7.571434,0.136905,36,99,9],[7.571434,0.279762,34,99,0],[7.714291,0.065476,44,99,9],[7.857149,0.208333,42,99,0],[8.000006,0.065476,44,99,9],[8.071435,0.065476,44,75,9],[8.142863,0.065476,42,99,0],[8.142863,0.065476,44,99,9],[8.214292,0.065476,44,62,9],[8.285721,0.065476,41,99,0],[8.285721,0.065476,44,99,9],[8.285721,0.136905,36,99,9],[8.357149,0.065476,44,57,9],[8.428578,0.065476,39,99,0],[8.428578,0.065476,44,99,9],[8.500006,0.065476,44,73,9],[8.571435,0.065476,41,99,0],[8.571435,0.065476,44,99,9],[8.571435,0.136905,37,99,9],[8.785721,0.065476,44,99,9],[8.85715,0.065476,39,99,0],[9.000007,0.065476,36,99,9],[9.000007,0.065476,44,99,9],[9.000007,0.136905,32,99,0],[9.071435,0.065476,36,99,9]]}]};
+globalThis.DiscoVisual={"floorPatterns":[{"descriptor":[0,7,5],"tiles":[2,2,2,3,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2]},{"descriptor":[0,24,5],"tiles":[2,3,3,2,3,2,2,2,3,2,3,2,3,2,3,3,2,3,3,3,3,3,3,3,2,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,3,3,3,3,3,2,3,2,2,3,2,3,2,3,2,2,3,3,2,3,2,2,2,3,3,3,3,3,3,2,3,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,2,3,3,3,3,3,3,2,2,3,2,3,2,2,2,3,2,3,2,3,2,3,2,3,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]},{"descriptor":[1,5,5],"tiles":[2,2,2,2,2,2,2,3,2,2,3,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,3,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,3,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2]},{"descriptor":[1,9,5],"tiles":[3,3,3,3,3,3,3,2,2,2,2,3,3,2,2,2,2,3,3,2,2,2,2,3,3,2,2,2,2,3,3,3,3,3,3,3,2,2,2,2,2,2,2,3,3,3,3,2,2,3,2,2,3,2,2,3,2,2,3,2,2,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,2,2,2,2,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,2,2,2,2,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,2,2,2,2,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]},{"descriptor":[1,8,20],"tiles":[2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,2,2,3,2,2,2,2,3,2,2,2,2,3,2,2,2,2,3,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,2,2,2,2,3,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,2,2,3,2,2,2,2,3,2,2,2,2,3,2,2,2,2,3,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,2]},{"descriptor":[1,10,60],"tiles":[3,2,2,3,2,2,3,3,2,3,2,2,3,3,3,3,2,2,3,2,3,3,2,2,3,2,2,3,2,2,2,2,2,2,2,2,3,3,3,3,2,2,3,2,2,3,2,2,3,2,2,3,2,2,3,2,2,3,2,2,3,3,3,3,2,2,2,2,2,2,2,2,3,2,2,3,2,2,3,2,3,2,2,2,3,3,2,2,2,2,3,2,3,2,2,2,3,2,2,3,2,2,2,2,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,3,2,2,2,2,2,2,2,2,2,2,3,3,3,3,2,2,3,2,2,3,2,2,3,2,2,3,2,2,3,3,3,3,2,2,3,2,2,3,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2]},{"descriptor":[1,2,60],"tiles":[2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,2,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3,3]},{"descriptor":[1,2,60],"tiles":[2,3,2,3,2,3,3,2,3,2,3,2,2,3,2,3,2,3,3,2,3,2,3,2,2,3,2,3,2,3,3,2,3,2,3,2,3,2,3,2,3,2,2,3,2,3,2,3,3,2,3,2,3,2,2,3,2,3,2,3,3,2,3,2,3,2,2,3,2,3,2,3]}],"positions":[[41,101],[77,95],[65,101],[52,95],[77,108],[88,101],[29,108],[77,120],[27,94],[42,112],[52,120]],"lightPositions":[[-5,11],[53,11],[9,11],[67,11],[-5,23],[81,11],[23,11],[67,23],[9,23],[95,11],[109,11],[81,23]],"djBodies":[[0,0],[0,4],[0,5],[1,1],[1,7],[0,6],[0,3],[0,2]]};
+
+</script>
+<script>
+/* Disco simulation: a browser translation of the fixed-point Nokia game rules.
+ * Provenance and known differences are recorded in reference/mechanics.md.
+ * No Java bytecode is executed by this file. */
+(function (root) {
+  'use strict';
+  const trunc = Math.trunc;
+  const clamp = (value, low, high) => Math.max(low, Math.min(high, value));
+  const MONEY = 16384, PEOPLE = 128, STEP = 20;
+  const CATEGORY_IDS = { lights: 1, floor: 2, dancer: 3, ball: 4, speakers: 31, decks: 32 };
+  const CATALOG = {};
+  const tiers = (category, id, name, prices, description) => {
+    let factor = 0;
+    CATALOG[category] = prices.map((cost, index) => {
+      factor = index ? trunc(factor * 110 / 100) : trunc(1024 * 70 / 100);
+      return Object.freeze({ category, id, tier: index + 1, label: prices.length === 1 ? name : `${name} ${index + 1}`,
+        cost, effect: trunc(cost * factor / 500), description });
+    });
+  };
+  tiers('lights', 1, '灯光', [500, 700, 1000, 1200, 1500, 1700], '改善灯光，让舞厅更有气氛。');
+  tiers('floor', 2, '舞池', [800, 1600, 2400], '扩建舞池，容纳更多客人。');
+  tiers('dancer', 3, '舞者', [1000, 2000], '聘请舞者，持续提高舞厅气氛。');
+  tiers('ball', 4, '迪斯科球', [100], '购买迪斯科球，为舞厅添点光彩。');
+  tiers('speakers', 31, '音响', [1000, 1500, 2000, 2500, 3000], '升级音响，让音乐响彻舞池。');
+  tiers('decks', 32, 'DJ台', [500, 1000, 2000], '升级控制设备，让更好的DJ愿意登台。');
+  const hostNames = ['DJ Crash', 'DJ Fiasco', 'DJ Dany', 'DJ Nurse', 'DJ Robot', 'DJ Loop', 'DJ Alfa C.'];
+  const hostDescriptions = [
+    '力量型DJ，设备能不能撑住就看运气了。', '初出茅庐，可能精彩，也可能砸场。',
+    '曾是传教士，现在用音乐感染观众。', '颇有名气的本地新星。',
+    'Groove博士创造的机器人，表现稳定。', '世界级DJ，能让全场热起来。', '最顶尖的DJ，带来最火热的舞会。'
+  ];
+  CATALOG.host = [300, 500, 800, 1200, 1800, 2500, 3500].map((cost, i) => Object.freeze({
+    category: 'host', id: 51 + i, tier: i + 1, label: hostNames[i], cost,
+    effect: trunc(cost * trunc(1024 * 90 / 100) / 500),
+    required: [0, 0, 1, 1, 2, 2, 3][i], duration: 30, description: hostDescriptions[i]
+  }));
+  CATALOG.advertising = [
+    { id: 73, label: '传单广告', cost: 300, description: '向附近的人派发传单。客人越多，效果越好。' },
+    { id: 71, label: '报纸广告', cost: 600, description: '刊登报纸广告，吸引一批新客人。' },
+    { id: 72, label: '电视广告', cost: 1000, description: '投放电视广告，让更多人知道你的舞厅。' },
+    { id: 74, label: '会员派对', cost: 4000, description: '举办主题派对，附带DJ和特别活动。' }
+  ].map((item, i) => Object.freeze({ ...item, category: 'advertising', tier: i + 1, effect: 0 }));
+  for (const entries of Object.values(CATALOG)) Object.freeze(entries);
+  Object.freeze(CATALOG);
+  const OBJECTIVES = Object.freeze([
+    Object.freeze({ level: 1, title: '赚到一万美元', description: '在31天内，让资金达到 $10000。', target: 10000, metric: 'cash', startCash: 2000 }),
+    Object.freeze({ level: 2, title: '完美的派对', description: '让开心指数达到100。', target: 100, metric: 'happiness', startCash: 1500 }),
+    Object.freeze({ level: 3, title: '全城来跳舞', description: '让舞厅里的人数达到300。', target: 300, metric: 'visitors', startCash: 1000 })
+  ]);
+  const EVENT_WEIGHTS = [0, 1, 2, 3, 5, 5, 6, 7, 7, 7, 7, 8, 8, 8, 8, 9, 9, 10, 11, 11, 11, 11, 11, 11, 11, 11, 11, 11];
+  const EVENT_QUOTAS = [1, 1, 1, 1, 1, 3, 2, 5, -1, 5, 1, -1];
+  const EVENT_LABELS = {
+    0: '外星来客', 1: '护士学校的聚会', 2: '猴子闯入舞厅', 3: 'DJ Ape登场',
+    5: '客人嫌音乐太小', 6: '舞池太拥挤', 7: '设备损坏', 8: 'DJ的状况',
+    9: '需要新的视觉效果', 10: '明星到访', 11: '舞厅缺少DJ'
+  };
+  class Game {
+    constructor(options = {}) {
+      this.seed = Number.isFinite(options.seed) ? options.seed >>> 0 : (Date.now() >>> 0);
+      this.randomEvents = options.randomEvents !== false;
+      this._messages = [];
+      this.start(1);
+    }
+    start(level = 1) {
+      level = clamp(trunc(Number(level) || 1), 1, 3);
+      this._carry = 0;
+      this._messages = [];
+      this._r = {
+        money: OBJECTIVES[level - 1].startCash * MONEY, mood: 49152, people: 384, arrivals: 384,
+        baseMood: 491520, targetMood: 0, floor: 0, loan: 0, fatigue: 0, happy: false,
+        dj: 0, djPower: 0, djTime: 0, party: 0, partyPower: 0,
+        sinceDJ: 0, sincePurchase: 0, elapsed: 1, moodSum: 0, peopleSum: 0,
+        sampleIndex: 0, samples: new Array(10).fill(0), items: {},
+        event: null, eventCooldown: 0, eventPower: 0, eventQuotas: EVENT_QUOTAS.slice(),
+        advertised: false, borrowed: false, notices: { advertising: false, loan: false },
+        level, status: 'playing', reason: '', sequence: 0, lastNotice: ''
+      };
+      this._sync();
+      return this.state;
+    }
+    _rand(min, max) {
+      // Saved deterministic RNG replaces java.util.Random without changing ranges.
+      this.seed = (Math.imul(this.seed, 1664525) + 1013904223) >>> 0;
+      return min + (max > min ? this.seed % (max - min) : 0);
+    }
+    _emit(message) {
+      this._r.lastNotice = message;
+      this._r.sequence++;
+      this._messages.push(message);
+      if (this._messages.length > 12) this._messages.shift();
+    }
+    drainMessages() { return this._messages.splice(0); }
+    _tier(category) { return this._r.items[CATEGORY_IDS[category]]?.tier || 0; }
+    _sync() {
+      const r = this._r;
+      const rawMood = Math.floor(r.mood / MONEY);
+      const cash = Math.floor(r.money / MONEY);
+      const visitors = Math.floor(r.people / PEOPLE);
+      const equipment = {};
+      for (const category of Object.keys(CATEGORY_IDS)) equipment[category] = this._tier(category);
+      const happiness = clamp(trunc(100 * rawMood / 150), 0, 100);
+      const objective = OBJECTIVES[r.level - 1];
+      const value = objective.metric === 'cash' ? cash : objective.metric === 'visitors' ? visitors : happiness;
+      this.state = {
+        level: r.level, status: r.status, reason: r.reason, cash: Math.max(0, cash), visitors,
+        happiness, rawMood, day: Math.floor(r.elapsed / 30000) + 1, elapsed: (r.elapsed - 1) / 1000,
+        dayProgress: ((r.elapsed - 1) % 30000) / 30000, secondsLeft: Math.max(0, 900 - trunc(r.elapsed / 1000)),
+        equipment, happyHour: r.happy, loan: Math.max(0, Math.floor(r.loan / MONEY)),
+        adFatigue: Math.round(100 * r.fatigue / 75000),
+        host: { id: r.dj, tier: r.dj >= 51 && r.dj <= 57 ? r.dj - 50 : 0,
+          name: r.dj === 58 ? 'DJ Ape' : (CATALOG.host.find(x => x.id === r.dj)?.label || '无DJ'),
+          remaining: Math.max(0, r.djTime / 1000), active: r.djPower !== 0 },
+        party: { type: r.party, active: r.partyPower !== 0 },
+        event: r.event ? { id: r.event.id, label: EVENT_LABELS[r.event.id], elapsed: r.event.time / 1000 } : null,
+        notice: { id: r.sequence, text: r.lastNotice },
+        progress: clamp(value / objective.target, 0, 1), objective,
+        score: cash + Math.floor(r.peopleSum / r.elapsed) * 10 + Math.floor(r.moodSum / r.elapsed) * 100,
+        crowdGrowing: r.arrivals - r.people > 256, moodGrowing: r.targetMood - r.mood > 49152
+      };
+    }
+    canBuy(category, tier) {
+      const item = CATALOG[category]?.find(item => item.tier === Number(tier));
+      if (!item) return { ok: false, message: '没有这个商品。' };
+      if (this._r.status !== 'playing') return { ok: false, message: '请先开始游戏。' };
+      if (category !== 'host' && category !== 'advertising' && this._tier(category) >= item.tier)
+        return { ok: false, message: '已经拥有这个级别或更好的设备。' };
+      if (category === 'host' && this._r.dj === item.id)
+        return { ok: false, message: '这位DJ正在表演。' };
+      if (Math.floor(this._r.money / MONEY) <= item.cost)
+        return { ok: false, message: '资金不足，请保留一些营业资金。' };
+      if (category === 'host') {
+        if (this._tier('decks') < item.required) return { ok: false, message: `需要 ${item.required} 级DJ台。` };
+        if (this._tier('speakers') < item.required) return { ok: false, message: `需要 ${item.required} 级音响。` };
+      }
+      return { ok: true, message: '', item };
+    }
+    buy(category, tier) {
+      const check = this.canBuy(category, tier);
+      if (!check.ok) return check;
+      const item = check.item, r = this._r;
+      r.money -= item.cost * MONEY;
+      r.sincePurchase = 0;
+      if (category === 'host') {
+        r.dj = item.id;
+        r.djTime = 30000;
+        r.djPower = item.id < 54 ? this._rand(trunc(item.effect / 2), item.effect) : item.effect;
+      } else if (category === 'advertising') {
+        r.advertised = true;
+        if (item.id === 71 || item.id === 72) {
+          const reach = Math.max(3700, 37000 - r.fatigue);
+          r.arrivals += trunc(reach * (item.id === 71 ? 40 : 80) / 37000) * PEOPLE;
+          r.fatigue += item.id === 71 ? 11000 : 15000;
+        } else if (item.id === 73) {
+          const reach = Math.max(740, 37000 - r.fatigue);
+          const extra = Math.min(20, trunc(reach * trunc(40 * Math.floor(r.people / PEOPLE) / 100) / 37000));
+          r.arrivals += extra * PEOPLE;
+          r.fatigue += 8000;
+        } else {
+          r.djTime = 30000;
+          r.dj = 51 + this._rand(3, 6);
+          r.djPower = 1;
+          r.party = this._rand(0, 3);
+          r.partyPower = this._rand(8000, 16000);
+        }
+      } else {
+        r.items[item.id] = { tier: item.tier, power: item.effect };
+        if (category === 'floor') r.floor = item.tier;
+      }
+      const message = category === 'advertising' && item.id === 74
+        ? ['泡沫派对开始了！', '今晚是名人之夜！', '地中海之夜，饮料畅饮！'][r.party]
+        : `${item.label}${category === 'host' ? '已登台。' : '购买成功。'}`;
+      this._emit(message);
+      this._sync();
+      return { ok: true, message, item };
+    }
+    toggleHappyHour() {
+      const r = this._r;
+      if (r.status !== 'playing' || r.money <= 0) return false;
+      r.happy = !r.happy;
+      this._sync();
+      return r.happy;
+    }
+    takeLoan() {
+      const r = this._r;
+      if (r.status !== 'playing') return { ok: false, message: '请先开始游戏。' };
+      if (r.loan > 0) return { ok: false, message: '请先还清上一笔贷款。' };
+      r.money += 1000 * MONEY;
+      r.loan += 1500 * MONEY;
+      r.borrowed = true;
+      this._emit('贷款到账 $1000，开始自动还款。');
+      this._sync();
+      return { ok: true, message: '贷款到账 $1000。' };
+    }
+    nextLevel() {
+      if (this._r.status !== 'won' || this._r.level >= 3) return false;
+      this.start(this._r.level + 1);
+      return true;
+    }
+    tick(seconds) {
+      if (!Number.isFinite(seconds) || seconds <= 0 || this._r.status !== 'playing') return this.state;
+      this._carry += Math.min(seconds, 3600) * 1000;
+      while (this._carry + 1e-7 >= STEP && this._r.status === 'playing') {
+        this._step(STEP);
+        this._carry -= STEP;
+      }
+      this._carry = Math.max(0, this._carry);
+      this._sync();
+      return this.state;
+    }
+    _step(ms) {
+      const r = this._r;
+      r.fatigue = clamp(r.fatigue - ms, 0, 75000);
+      if (r.dj < 1 || r.djTime <= 0) r.sinceDJ += ms;
+      else {
+        r.sinceDJ = 0;
+        r.djTime -= ms;
+        if (r.djTime <= 0) this._clearDJ();
+      }
+      r.sincePurchase += ms;
+      r.targetMood = Object.values(r.items).reduce((sum, item) => sum + item.power * PEOPLE, 0)
+        + r.djPower * PEOPLE + r.partyPower * PEOPLE + r.baseMood + r.eventPower;
+      if (r.happy) r.targetMood += trunc(160 * Math.floor(r.people / PEOPLE) / 100) * MONEY;
+      const crowded = r.people > [1920, 5760, 10240, 25600][r.floor];
+      if (r.targetMood > r.mood + 1920) {
+        r.mood += trunc(51200 * ms / 1000);
+        if (!crowded) r.baseMood += ms;
+      } else if (r.targetMood <= r.mood - 1920) {
+        r.mood -= trunc(51200 * ms / 1000);
+        if (r.targetMood > 0) r.baseMood -= ms;
+      }
+      if (crowded) r.baseMood -= ms;
+      const perPerson = r.people !== 0 ? trunc(r.mood / r.people) : 0;
+      r.samples[r.sampleIndex] = perPerson;
+      const average = trunc(r.samples.reduce((sum, value) => sum + value, 0) / 10);
+      r.sampleIndex = (r.sampleIndex + 1) % 10;
+      if (average - perPerson <= 2 && average - perPerson >= -2) r.baseMood -= ms;
+      if (perPerson > 160) r.people += trunc(55 * ms / 1000);
+      else if (perPerson <= 112) {
+        r.people = Math.max(0, r.people - trunc(768 * ms / 1000));
+        r.arrivals = Math.max(0, r.arrivals - trunc(768 * ms / 1000));
+      }
+      if (r.arrivals > r.people) r.people += trunc(440 * ms / 1000);
+      else r.arrivals = r.people;
+      if (r.people >= 38528) r.people = r.arrivals = 38528;
+      let operatingCost = trunc(163840 * ms / 1000);
+      if (r.loan > 0) {
+        const payment = trunc(84480 * ms / 1000);
+        r.loan = Math.max(0, r.loan - payment);
+        operatingCost += payment;
+        if (r.loan === 0) this._emit('贷款已还清，可以再次申请。');
+      }
+      r.money += trunc((r.happy ? -48 : 153) * r.people / 1000) * ms - operatingCost;
+      r.moodSum += Math.floor(r.mood / MONEY) * ms;
+      r.peopleSum += Math.floor(r.people / PEOPLE) * ms;
+      r.elapsed += ms;
+      if (r.money <= 0 && r.happy) r.happy = false;
+      else if (r.money <= 0 || trunc(r.elapsed / 1000) > 900) {
+        r.status = 'lost';
+        r.reason = r.money <= 0 ? '营业资金已用尽。' : '时间到了，尚未完成挑战。';
+      }
+      if (r.status === 'playing') {
+        if (this.randomEvents) this._events(ms);
+        this._tutorialNotices();
+      }
+      const won = r.level === 1 ? Math.floor(r.money / MONEY) >= 10000
+        : r.level === 2 ? trunc(100 * Math.floor(r.mood / MONEY) / 150) >= 100
+        : Math.floor(r.people / PEOPLE) >= 300;
+      if (won) { r.status = 'won'; r.happy = false; r.reason = '挑战成功！'; }
+    }
+    _tutorialNotices() {
+      const r = this._r;
+      if (r.level !== 1) return;
+      if (r.elapsed > 25000 && !r.advertised && !r.notices.advertising) {
+        r.notices.advertising = true;
+        this._emit('这里太冷清了，试试广告，让大家知道你的舞厅。');
+      } else if (r.money < 400 * MONEY && !r.borrowed && !r.notices.loan) {
+        r.notices.loan = true;
+        this._emit('资金紧张？你可以在游戏选项里申请贷款。');
+      }
+    }
+    _clearDJ() {
+      const r = this._r;
+      r.dj = r.djPower = r.djTime = r.party = r.partyPower = 0;
+    }
+    _events(ms) {
+      const r = this._r;
+      if (!r.event) {
+        r.eventCooldown += ms;
+        if (r.eventCooldown < 10000) return;
+        r.eventCooldown = 0;
+        const id = EVENT_WEIGHTS[this._rand(0, EVENT_WEIGHTS.length)];
+        if (r.eventQuotas[id] === 0) return;
+        const mood = trunc(100 * Math.floor(r.mood / MONEY) / 150), people = Math.floor(r.people / PEOPLE);
+        const eligible = { 0: mood > 80, 1: people < 50, 2: people > 80 && r.money > 1500 * MONEY,
+          3: r.djPower === 0, 5: people > 50 && this._tier('speakers') < 5,
+          6: people > [15, 45, 80, 200][r.floor] && r.floor < 3,
+          7: people > 80 || (r.dj >= 51 && r.dj < 54), 8: people > 30 && r.djPower !== 0,
+          9: r.sincePurchase >= 40000, 10: mood > 40 && people < 80, 11: r.sinceDJ >= 20000 }[id];
+        if (!eligible) return;
+        r.eventQuotas[id]--;
+        r.event = { id, time: 0, stage: 0, speakerTier: this._tier('speakers') };
+        const power = { 0: -this._rand(4500, 5500), 1: this._rand(1625, 2275),
+          2: -this._rand(4500, 5500), 9: -7000, 10: 3250, 11: -14000 }[id];
+        if (power != null) r.eventPower = power * PEOPLE;
+        return;
+      }
+      const event = r.event, id = event.id, previous = event.time;
+      event.time += ms;
+      const elapsed = event.time;
+      const mood = trunc(100 * Math.floor(r.mood / MONEY) / 150), people = Math.floor(r.people / PEOPLE);
+      const threshold = [3, 5, 6, 7, 8, 11].includes(id) ? 1000 : 3000;
+      if (!event.stage && previous <= threshold && elapsed > threshold) {
+        event.stage = 1;
+        if (id === 3) { r.dj = 58; r.djPower = this._rand(2625, 3275); r.djTime = 30000; }
+        if (id === 5) r.eventPower = -this._rand(2625, 3275) * PEOPLE;
+        if (id === 6) r.eventPower = -this._rand(1000, 2000) * PEOPLE;
+        if (id === 7) {
+          const keys = Object.keys(r.items);
+          if (keys.length) {
+            const damaged = keys[this._rand(0, keys.length)], item = r.items[damaged];
+            item.tier--;
+            if (item.tier <= 0) delete r.items[damaged];
+            if (damaged === '2') r.floor = Math.max(0, item.tier);
+            const name = { 1: '灯光', 2: '舞池', 3: '舞者', 4: '迪斯科球', 31: '音响', 32: 'DJ台' }[damaged];
+            this._emit(damaged === '3' ? '一位舞者扭伤了脚，需要替换。' : `${name}发生损坏，需要维修升级。`);
+          }
+        } else if (id === 8) {
+          let variant = this._rand(0, 4);
+          if (variant > 0 && !(r.dj >= 51 && r.dj < 53)) variant = 0;
+          else if (variant > 0) { this._clearDJ(); r.sinceDJ = 0; }
+          this._emit(['客人们喜欢这首音乐，气氛越来越好了。', 'DJ厌倦了工作，离开了舞厅。', '客人不喜欢这位DJ，换一位试试。', '这位DJ今天不在状态。'][variant]);
+        } else this._emit({ 0: '外星人从轨道上看到派对，决定来凑个热闹！',
+          1: '当地护士学校的学生选择了这里聚会！', 2: '这些猴子怎么跑到舞厅来了？',
+          3: 'Groove博士的新发现：DJ Ape登台！', 5: '客人说音乐太小，但音响已开到最大。',
+          6: '舞池太拥挤，扩建一下吧。', 9: '该添些新灯光和视觉效果了。',
+          10: '一位著名流行歌手来到了舞厅！', 11: '这里太无聊，快请一位DJ吧。' }[id]);
+      }
+      const ended = {
+        0: mood < 60 || elapsed >= 30000, 1: elapsed >= 60000, 2: elapsed >= 30000,
+        3: elapsed >= 60000, 5: this._tier('speakers') > event.speakerTier || elapsed > 60000,
+        6: elapsed > 5000, 7: elapsed >= 1020, 8: elapsed >= 1020,
+        9: r.sincePurchase < 10000 || elapsed > 60000, 10: people > 100 || elapsed >= 60000,
+        11: r.sinceDJ === 0
+      }[id];
+      if (ended) { r.event = null; r.eventPower = 0; r.eventCooldown = 0; }
+    }
+    snapshot() {
+      return { version: 1, seed: this.seed, carry: this._carry, randomEvents: this.randomEvents,
+        raw: JSON.parse(JSON.stringify(this._r)) };
+    }
+    restore(data) {
+      try {
+        if (!data || data.version !== 1 || !data.raw || typeof data.raw !== 'object') return false;
+        const r = JSON.parse(JSON.stringify(data.raw));
+        const numbers = ['money', 'mood', 'people', 'arrivals', 'baseMood', 'targetMood', 'floor', 'loan',
+          'fatigue', 'dj', 'djPower', 'djTime', 'party', 'partyPower', 'sinceDJ', 'sincePurchase',
+          'elapsed', 'moodSum', 'peopleSum', 'sampleIndex', 'eventCooldown', 'eventPower', 'sequence'];
+        if (!numbers.every(key => Number.isFinite(r[key])) || !Number.isFinite(data.seed)
+          || !Number.isFinite(data.carry) || data.carry < 0 || data.carry > 3600000) return false;
+        if (![1, 2, 3].includes(r.level) || !['playing', 'won', 'lost'].includes(r.status)
+          || !Array.isArray(r.samples) || r.samples.length !== 10 || !r.samples.every(Number.isFinite)
+          || !Array.isArray(r.eventQuotas) || r.eventQuotas.length !== 12 || !r.eventQuotas.every(Number.isFinite)
+          || r.people < 0 || r.people > 38528 || r.elapsed < 1 || r.elapsed > 902000
+          || !Number.isInteger(r.floor) || r.floor < 0 || r.floor > 3
+          || !Number.isInteger(r.sampleIndex) || r.sampleIndex < 0 || r.sampleIndex > 9
+          || !r.items || typeof r.items !== 'object' || !r.notices || typeof r.notices !== 'object') return false;
+        for (const [id, item] of Object.entries(r.items)) {
+          const cat = Object.keys(CATEGORY_IDS).find(key => CATEGORY_IDS[key] === Number(id));
+          if (!cat || !item || !CATALOG[cat].some(entry => entry.tier === item.tier) || !Number.isFinite(item.power)) return false;
+        }
+        if (r.event && (!EVENT_WEIGHTS.includes(r.event.id) || !Number.isFinite(r.event.time) || !Number.isFinite(r.event.stage))) return false;
+        this._r = r;
+        this.seed = data.seed >>> 0;
+        this._carry = data.carry;
+        this.randomEvents = data.randomEvents !== false;
+        this._messages = [];
+        this._sync();
+        return true;
+      } catch (_) { return false; }
+    }
+  }
+  const api = Object.freeze({ Game, CATALOG, OBJECTIVES, CATEGORY_IDS, DAY_SECONDS: 30 });
+  root.DiscoEngine = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+/*
+ * Disco's original MIDI notes and tempo, played by a small offline Web Audio
+ * synthesizer. This preserves the recovered melodies, not the exact Nokia
+ * soundfont/instrument timbres. Music data is supplied by window.DiscoMusic.
+ * No original Java code is executed here. Muted until the user enables sound.
+ */
+(function (global) {
+  'use strict';
+
+  const SILENCE = 0.0001;
+  const LOOKAHEAD = 0.2;
+  const MAX_VOICES = 48;
+  const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
+
+  class DiscoAudio {
+    constructor() {
+      this.enabled = false;
+      this.paused = false;
+      this.needsGesture = false;
+      this.scene = 'title';
+      this.context = null;
+      this.master = null;
+      this._voices = new Set();
+      this._song = null;
+      this._index = 0;
+      this._loopStart = null;
+      this._noise = null;
+      this._request = 0;
+    }
+
+    _createContext() {
+      if (this.context && this.context.state !== 'closed') return this.context;
+      if (this.context) this._reset();
+      const AudioContext = global.AudioContext || global.webkitAudioContext;
+      if (!AudioContext) return null;
+      const context = new AudioContext();
+      this.context = context;
+      context.onstatechange = () => {
+        if (context !== this.context) return;
+        if (context.state !== 'running') this._reset();
+        this.needsGesture = this.enabled && !this.paused && context.state !== 'running';
+        if (context.state === 'running' && (!this.enabled || this.paused)) this._suspend(context);
+      };
+      const master = context.createGain();
+      master.gain.value = 0.32;
+      const compressor = context.createDynamicsCompressor();
+      compressor.threshold.value = -12;
+      compressor.knee.value = 12;
+      compressor.ratio.value = 4;
+      compressor.attack.value = 0.004;
+      compressor.release.value = 0.15;
+      master.connect(compressor);
+      compressor.connect(context.destination);
+      this.master = master;
+      this._compressor = compressor;
+
+      const noise = context.createBuffer(1, context.sampleRate, context.sampleRate);
+      const samples = noise.getChannelData(0);
+      // A fixed seed gives the percussion the same character on each run.
+      let seed = 0x6230;
+      for (let i = 0; i < samples.length; i++) {
+        seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
+        samples[i] = ((seed >>> 0) / 0x80000000) - 1;
+      }
+      this._noise = noise;
+      return context;
+    }
+
+    get playing() {
+      return this.enabled && !this.paused && this.context?.state === 'running';
+    }
+
+    get state() {
+      return !this.enabled ? 'muted' : this.paused ? 'paused' : this.playing ? 'playing' : 'interrupted';
+    }
+
+    _suspend(context = this.context) {
+      if (!context || context.state === 'closed') return Promise.resolve();
+      // Older Safari can throw synchronously; rejected promises must also be handled.
+      try { return Promise.resolve(context.suspend()).catch(() => {}); }
+      catch (_) { return Promise.resolve(); }
+    }
+
+    _resume() {
+      let context;
+      try {
+        context = this._createContext();
+        if (!context) return Promise.resolve(false);
+        // Invoke resume before the first await, inside the original user gesture.
+        const pending = context.state === 'running' ? undefined : context.resume();
+        return Promise.resolve(pending).then(() => {
+          if (context !== this.context) return false;
+          if (!this.enabled || this.paused) {
+            this.needsGesture = false;
+            this._suspend(context);
+            return false;
+          }
+          this.needsGesture = context.state !== 'running';
+          if (!this.needsGesture) this.tick();
+          return !this.needsGesture;
+        }).catch(() => {
+          if (context === this.context) this.needsGesture = this.enabled && !this.paused && context.state !== 'running';
+          return false;
+        });
+      } catch (_) {
+        this.needsGesture = this.enabled && !this.paused;
+        return Promise.resolve(false);
+      }
+    }
+
+    resumeFromGesture() {
+      // Touching a game key must never turn on music that the user muted.
+      if (!this.enabled || this.paused) return Promise.resolve(false);
+      if (this.playing) { this.needsGesture = false; return Promise.resolve(true); }
+      return this._resume();
+    }
+
+    async setEnabled(value) {
+      const wanted = Boolean(value);
+      const request = ++this._request;
+      if (!wanted) {
+        this.enabled = false;
+        this.needsGesture = false;
+        this._reset();
+        await this._suspend();
+        return false;
+      }
+      this.enabled = true;
+      this._reset();
+      const running = await this._resume();
+      if (request !== this._request) return this.enabled;
+      // While intentionally paused, remember the user's choice without claiming playback.
+      if (!running && (!this.paused || !this.context || this.context.state === 'closed')) {
+        this.enabled = false;
+        this.needsGesture = false;
+        this._reset();
+        await this._suspend();
+      }
+      return this.enabled;
+    }
+
+    setScene(scene) {
+      const next = scene === 'game' ? 'game' : 'title';
+      if (next === this.scene) return;
+      this.scene = next;
+      this._reset();
+    }
+
+    setPaused(value) {
+      const paused = Boolean(value);
+      if (paused === this.paused) return;
+      this.paused = paused;
+      this.needsGesture = false;
+      this._reset();
+      if (!this.context || !this.enabled) return;
+      if (paused) {
+        this._suspend();
+      } else {
+        this._resume();
+      }
+    }
+
+    _reset() {
+      for (const voice of this._voices) this._disposeVoice(voice, true);
+      this._voices.clear();
+      this._song = null;
+      this._index = 0;
+      this._loopStart = null;
+    }
+
+    _disposeVoice(voice, stop) {
+      if (voice.disposed) return;
+      voice.disposed = true;
+      for (const source of voice.sources) {
+        source.onended = null;
+        if (stop) {
+          try { source.stop(); } catch (_) { /* source may have already ended */ }
+        }
+      }
+      for (const node of voice.nodes) {
+        try { node.disconnect(); } catch (_) { /* already disconnected */ }
+      }
+      this._voices.delete(voice);
+    }
+
+    _voice(sources, nodes, start, stop) {
+      if (this._voices.size >= MAX_VOICES) {
+        this._disposeVoice(this._voices.values().next().value, true);
+      }
+      const voice = { sources, nodes, disposed: false };
+      this._voices.add(voice);
+      sources[sources.length - 1].onended = () => this._disposeVoice(voice, false);
+      for (const source of sources) {
+        source.start(start);
+        source.stop(stop);
+      }
+    }
+
+    _getSong() {
+      const songs = global.DiscoMusic && global.DiscoMusic.songs;
+      if (!Array.isArray(songs)) return null;
+      const filename = this.scene === 'game' ? 'title2.mid' : 'title.mid';
+      return songs.find(song => song.file === filename) || songs[0] || null;
+    }
+
+    tick() {
+      if (!this.enabled || this.paused || !this.context || this.context.state !== 'running') return;
+      const song = this._getSong();
+      if (!song || !Array.isArray(song.notes) || !song.notes.length || !(song.duration > 0)) return;
+      const now = this.context.currentTime;
+      if (this._song !== song || this._loopStart === null) {
+        this._song = song;
+        this._index = 0;
+        this._loopStart = now + 0.035;
+      }
+      // Recover from a throttled/background frame without playing stale notes.
+      if (now > this._loopStart + song.duration + LOOKAHEAD) {
+        this._index = 0;
+        this._loopStart = now + 0.035;
+      }
+      let budget = 512;
+      while (budget-- > 0) {
+        if (this._index >= song.notes.length) {
+          this._index = 0;
+          this._loopStart += song.duration;
+        }
+        const note = song.notes[this._index];
+        const at = this._loopStart + note[0];
+        if (at > now + LOOKAHEAD) break;
+        this._index++;
+        if (at < now - 0.03) continue;
+        const start = Math.max(now + 0.002, at);
+        let program = 0;
+        for (const change of song.programs || []) {
+          if (change.channel === note[4] && change.time <= note[0]) program = change.program;
+        }
+        if (note[4] === 9) this._drum(start, note[2], note[3]);
+        else this._tone(start, note[1], note[2], note[3], program);
+      }
+    }
+
+    _tone(start, duration, pitch, velocity, program) {
+      const ctx = this.context;
+      const frequency = 440 * Math.pow(2, (clamp(pitch, 0, 127) - 69) / 12);
+      const length = clamp(duration, 0.025, 6);
+      const bass = program >= 32 && program <= 39;
+      const strings = program >= 40 && program <= 51;
+      const guitar = program >= 24 && program <= 31;
+      const attack = strings ? Math.min(0.025, length * 0.3) : 0.004;
+      const release = strings ? 0.065 : bass ? 0.035 : 0.045;
+      const peak = (bass ? 0.25 : strings ? 0.07 : guitar ? 0.12 : 0.14) * Math.pow(clamp(velocity, 1, 127) / 127, 1.25);
+      const sustain = peak * (strings ? 0.7 : bass ? 0.5 : 0.3);
+      const end = start + length;
+      const oscillator = ctx.createOscillator();
+      oscillator.type = strings ? 'sawtooth' : 'triangle';
+      oscillator.frequency.setValueAtTime(frequency, start);
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.setValueAtTime(bass ? 1100 : strings ? 5000 : guitar ? 2400 : 5500, start);
+      filter.Q.value = 0.3;
+      const gain = ctx.createGain();
+      gain.gain.setValueAtTime(SILENCE, start);
+      gain.gain.linearRampToValueAtTime(peak, start + attack);
+      gain.gain.exponentialRampToValueAtTime(Math.max(SILENCE, sustain), Math.min(end, start + attack + 0.13));
+      gain.gain.setValueAtTime(Math.max(SILENCE, sustain), end);
+      gain.gain.exponentialRampToValueAtTime(SILENCE, end + release);
+      oscillator.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      this._voice([oscillator], [oscillator, filter, gain], start, end + release + 0.008);
+    }
+
+    _drum(start, pitch, velocity) {
+      const ctx = this.context;
+      const strength = clamp(velocity, 1, 127) / 127;
+      if (pitch === 35 || pitch === 36) {
+        const oscillator = ctx.createOscillator();
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(115, start);
+        oscillator.frequency.exponentialRampToValueAtTime(42, start + 0.12);
+        const gain = ctx.createGain();
+        gain.gain.setValueAtTime(0.5 * strength, start);
+        gain.gain.exponentialRampToValueAtTime(SILENCE, start + 0.17);
+        oscillator.connect(gain);
+        gain.connect(this.master);
+        this._voice([oscillator], [oscillator, gain], start, start + 0.18);
+        return;
+      }
+      const hat = pitch === 42 || pitch === 44 || pitch === 46;
+      const openHat = pitch === 46;
+      const rim = pitch === 37;
+      const length = hat ? (openHat ? 0.14 : 0.055) : rim ? 0.045 : 0.12;
+      const source = ctx.createBufferSource();
+      source.buffer = this._noise;
+      const filter = ctx.createBiquadFilter();
+      filter.type = hat ? 'highpass' : 'bandpass';
+      filter.frequency.value = hat ? 6500 : rim ? 2200 : 1400;
+      filter.Q.value = hat ? 0.65 : rim ? 2 : 0.8;
+      const gain = ctx.createGain();
+      const peak = (hat ? 0.13 : rim ? 0.18 : 0.24) * strength;
+      gain.gain.setValueAtTime(peak, start);
+      gain.gain.exponentialRampToValueAtTime(SILENCE, start + length);
+      source.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+      this._voice([source], [source, filter, gain], start, start + length + 0.008);
+    }
+
+    beep(kind) {
+      if (!this.enabled || this.paused || !this.context || this.context.state !== 'running') return;
+      const now = this.context.currentTime + 0.005;
+      this._tone(now, 0.055, kind === 'error' ? 48 : 79, 50, 2);
+    }
+  }
+
+  global.DiscoAudio = DiscoAudio;
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script>
+(function (root) {
+  'use strict';
+  const W = 128, H = 128;
+  class Renderer {
+    constructor(canvas) {
+      this.canvas = canvas;
+      this.ctx = canvas.getContext('2d', { alpha: false });
+      this.ctx.imageSmoothingEnabled = false;
+      this.images = {};
+    }
+    async load() {
+      await Promise.all(Object.entries(root.DiscoAssets || {}).map(([name, src]) => new Promise(resolve => {
+        const im = new Image();
+        im.onload = () => { this.images[name] = im; resolve(); };
+        im.onerror = resolve;
+        im.src = src;
+      })));
+      this.glyphs = root.DiscoFont || { chars: '' };
+    }
+    clear(color = '#f0f3e9') { this.ctx.fillStyle = color; this.ctx.fillRect(0, 0, W, H); }
+    rect(x, y, w, h, color) { this.ctx.fillStyle = color; this.ctx.fillRect(Math.round(x), Math.round(y), w, h); }
+    sprite(name, sx, sy, w, h, x, y, flip = false) {
+      const im = this.images[name]; if (!im) return;
+      const c = this.ctx; x = Math.round(x); y = Math.round(y);
+      if (flip) { c.save(); c.translate(x + w, y); c.scale(-1, 1); c.drawImage(im, sx, sy, w, h, 0, 0, w, h); c.restore(); }
+      else c.drawImage(im, sx, sy, w, h, x, y, w, h);
+    }
+    measure(str) { return Array.from(String(str)).reduce((n, ch) => n + (ch.charCodeAt(0) > 255 ? 12 : 6), 0); }
+    text(str, x, y, color = '#101932', align = 'left') {
+      str = String(str); if (align === 'center') x -= Math.floor(this.measure(str) / 2); if (align === 'right') x -= this.measure(str);
+      x = Math.round(x); y = Math.round(y);
+      const c = this.ctx, atlas = this.images.font;
+      if (!atlas) { c.font = '12px SimSun, monospace'; c.textBaseline = 'top'; c.fillStyle = color; c.fillText(str, x, y); return; }
+      for (const ch of str) {
+        const index = this.glyphs.chars.indexOf(ch), width = ch.charCodeAt(0) > 255 ? 12 : 6;
+        if (index >= 0 && ch !== ' ') {
+          c.save(); c.beginPath(); c.rect(x, y, width, 12); c.clip();
+          const tinted = this.tintFont(color);
+          c.drawImage(tinted, (index % 32) * 12, Math.floor(index / 32) * 12, width, 12, x, y, width, 12);
+          c.restore();
+        }
+        x += width;
+      }
+    }
+    tintFont(color) {
+      this.fontCache ||= {};
+      if (this.fontCache[color]) return this.fontCache[color];
+      const im = this.images.font, ca = document.createElement('canvas'); ca.width = im.width; ca.height = im.height;
+      const cx = ca.getContext('2d'); cx.drawImage(im, 0, 0); cx.globalCompositeOperation = 'source-in'; cx.fillStyle = color; cx.fillRect(0, 0, ca.width, ca.height);
+      return (this.fontCache[color] = ca);
+    }
+    wrap(str, width = 116) {
+      const out = []; let line = '';
+      for (const ch of String(str)) {
+        if (ch === '\n') { out.push(line); line = ''; continue; }
+        if (this.measure(line + ch) > width) { out.push(line); line = ''; }
+        line += ch;
+      }
+      if (line || !out.length) out.push(line); return out;
+    }
+    number(value, x, y, digits = 0) {
+      const s = String(Math.max(0, Math.floor(value))).padStart(digits, ' ');
+      for (let i = 0; i < s.length; i++) if (s[i] !== ' ') this.sprite('numbers', Number(s[i]) * 5, 0, 5, 6, x + i * 5, y);
+    }
+    softkeys(left = '选择', right = '返回') {
+      this.rect(0, 114, 128, 14, '#d9e1e6'); this.rect(0, 114, 128, 1, '#8c9aa5');
+      this.text(left, 3, 115); this.text(right, 125, 115, '#101932', 'right');
+    }
+    title(time) {
+      this.clear('#000'); this.sprite('title', 0, 0, 128, 128, 0, 0);
+    }
+    menu(title, rows, index, options = {}) {
+      this.clear(); this.rect(0, 0, 128, 17, '#273d73'); this.text(title, 64, 2, '#fff', 'center');
+      const capacity = options.subtitle ? 5 : 6, startY = options.subtitle ? 33 : 23;
+      if (options.subtitle) this.text(options.subtitle, 5, 19, '#596476');
+      const start = Math.max(0, Math.min(index - Math.floor(capacity / 2), rows.length - capacity));
+      for (let j = 0; j < capacity && j + start < rows.length; j++) {
+        const r = rows[j + start], y = startY + j * 14, selected = index === j + start;
+        if (selected) this.rect(1, y - 1, 121, 14, '#3c5593');
+        const color = selected ? '#fff' : r.disabled ? '#87919c' : '#111d39';
+        this.text(r.label || r, 5, y, color);
+      }
+      if (rows.length > capacity) {
+        this.rect(125, startY, 2, capacity * 14 - 2, '#c0cad0');
+        this.rect(125, startY + Math.round(start / (rows.length - capacity) * (capacity * 14 - 14)), 2, 12, '#52668c');
+      }
+      this.softkeys(options.left || '选择', options.right || '返回');
+    }
+    dialog(title, body, { left = '确定', right = '返回', scroll = 0, color = '#273d73' } = {}) {
+      this.clear(); this.rect(0, 0, 128, 17, color); this.text(title, 64, 2, '#fff', 'center');
+      const lines = Array.isArray(body) ? body.flatMap(s => this.wrap(s)) : this.wrap(body);
+      lines.slice(scroll, scroll + 6).forEach((line, i) => this.text(line, 5, 22 + i * 14));
+      if (lines.length > 6) this.text(scroll + 6 < lines.length ? 'v' : '^', 121, 99, '#66758c');
+      this.softkeys(left, right);
+    }
+    person(x, y, body, legs, frame, flip = x > 64) {
+      const legX = legs * 44 + (frame % 2) * 22;
+      const bodyX = body * 50 + (frame % (body===10?3:2)) * 25 + (body > 10 ? 25 : 0);
+      const short = body === 2 || body === 3;
+      this.sprite('legs', legX, short ? 7 : 0, 22, short ? 12 : 19, x, y - 19, flip);
+      const shifts = [[0,2],[2,5],[1,0],[1,0],[0,2],[0,0],[0,2],[0,0],[-1,3],[0,6],[0,3],[0,1],[2,4],[2,4]];
+      const [dx, dy] = shifts[body] || [0,0];
+      this.sprite('body', bodyX, 0, 25, 26, x - 3 + (flip ? 3 - dx : dx), y - 45 + dy, flip);
+    }
+    room(s, time) {
+      const c = this.ctx, e = s.equipment || {}, visuals=root.DiscoVisual, activeDJ=s.host?.active, beat = Math.floor(time * (activeDJ ? 5 : 2.5));
+      c.save(); c.beginPath(); c.rect(0, 12, 128, 116); c.clip();
+      this.clear('#0b113a'); this.rect(0, 11, 51, 69, '#222c67');
+      // Original isometric floor geometry, using the preserved 22 x 12 tiles.
+      let floorVariant = (e.floor || 0); floorVariant = floorVariant === 1 ? 2 : floorVariant > 1 ? floorVariant * 2 - 1 : 0;
+      let fx = -70, fy = 99, alternate = 0;
+      while (fx < 140) {
+        for (let y = fy; y < 140; y += 12) this.sprite('floor', (alternate + floorVariant) * 22, 0, 22, 12, fx, y);
+        if (floorVariant !== 2) alternate = 1 - alternate;
+        fx += 12; fy += fx <= 40 ? -6 : 6;
+      }
+      // Light strips on both walls.
+      if (e.lights) {
+        const level = e.lights, ww = level > 3 ? 14 : level > 1 ? 7 : 2, hh = level > 3 ? 15 : level > 1 ? 9 : 2, sx = level > 3 ? 109 : level > 1 ? 123 : 130;
+        for (let i = 0; i < 5; i++) for (let j = 0; j < 4; j++) {
+          this.sprite('stage', sx, 0, ww, hh, 51 - ww - i * 14, 39 - hh + i * 7 - j * 15);
+          this.sprite('stage', sx, 0, ww, hh, 51 + i * 14, 24 + i * 7 - j * 15, true);
+        }
+      }
+      for (let n = 0; n < 2; n++) { this.sprite('stage', 15, 0, 15, 15, 51 + n * 14, 63 - n * 7); this.sprite('stage', 0, 0, 15, 15, 36 - n * 14, 63 - n * 7); }
+      if (activeDJ) {
+        const body=visuals?.djBodies[s.host.id===58?7:Math.max(0,s.host.tier-1)]?.[1] || 0;
+        this.person(34,61,body,body===3?2:body===2?7:0,beat%2,false);
+      }
+      const tableStyle = Math.max(0,Math.min(2, Math.floor(((e.speakers || 1)-1) / 2)));
+      for (let n = 0; n < 3; n++) { this.sprite('table', 13 + tableStyle * 60, 0, 13, 18, 51 + n * 9, 53 - n * 5); this.sprite('table', tableStyle * 60, 0, 13, 18, 38 - n * 9, 53 - n * 5); }
+      const decks = Math.max(1, e.decks || 0);
+      for (let n = 0; n < Math.min(e.decks||0, 2); n++) this.sprite('player', 19, 0, 16, 8, 31 - n * 10, 45 - n * 4);
+      for (let n = 0; n < decks; n++) this.sprite('player', 0, 0, 18, 12, 41 + 10 * (decks - 1 - n), 46 - 5 * (decks - 1 - n));
+      const floorSize = 3 + (e.floor || 0), patterns = [2,3,2,3,2,3,2,3,2];
+      const pattern=visuals?.floorPatterns[(Math.floor(time/15)%4)+(activeDJ?4:0)];
+      let tileX = 63, tileY = floorSize <= 4 ? 81 : 69;
+      for (let r = 0; r < floorSize; r++) for (let col = 0; col < floorSize; col++) {
+        let frame = patterns[(r * floorSize + col + beat) % patterns.length];
+        if(pattern){const [mode,n,speed]=pattern.descriptor;
+          frame=mode===0?pattern.tiles[r*n+(col+Math.floor(time/.4)%n)%n]:pattern.tiles[(Math.floor(time*1000/(speed*10))%n)*36+r*6+col];
+        }
+        this.sprite('floor', (5 + frame) * 22, 0, 22, 12, tileX - r * 12 + col * 12, tileY + r * 6 + col * 6);
+      }
+      const speakerTier=e.speakers>=4?2:e.speakers>0?1:0;
+      this.speaker(6,72,speakerTier);this.speaker(77,72,speakerTier);
+      if(e.speakers>=2){const innerTier=e.speakers===5?2:e.speakers>=3?1:0;this.speaker(20,77,innerTier);this.speaker(64,77,innerTier);}
+      const lp = visuals?.lightPositions || [[3,32],[105,45],[17,25],[91,38],[31,17],[77,30],[45,12],[63,23]];
+      lp.slice(0,(e.lights || 0)*2).forEach(([x,y],i)=>{
+        this.sprite('light',50,0,20,12,x,y);
+        if ((i+beat)%3===0) this.sprite('light',70,0,17,19,x+1,y-8);
+      });
+      if (e.ball) this.ball(100,11,beat%3===0);
+      const places = visuals?.positions || [[41,101],[77,95],[65,101],[52,95],[77,108],[88,101],[29,108],[77,120],[27,94],[42,112],[52,120]];
+      const count = s.visitors<15 ? 1+Math.floor(3*s.visitors/15) : s.visitors<=90 ? 3+Math.floor(6*(s.visitors-15)/75) : 9;
+      const special = {0:[3,2],1:[1,6],2:[2,1],10:[13,3]}[s.event?.id];
+      places.slice(0,count+(special?1:0)).map(([x,y],i)=>({x,y,i})).sort((a,b)=>a.y-b.y).forEach(({x,y,i})=>{
+        const type=special&&i===count?special:[[8,5],[11,0],[0,1],[12,0],[9,4]][i%5];
+        this.person(x,y,type[0],type[1],(beat+i)%2);
+      });
+      if (e.dancer) this.danceGirl(-2,125,beat);
+      if (e.dancer>1) this.danceGirl(102,125,beat+1);
+      if (s.happyHour) {
+        this.rect(15,57,98,15,'#16334c'); this.text('欢乐时间',64,59,'#fff5a5','center');
+      }
+      c.restore();
+      this.rect(0,0,128,12,'#fff'); this.rect(0,0,128,1,'#b3b3b3'); this.rect(0,10,128,2,'#d9d9d9');
+      this.sprite('symbols',13,0,11,14,1,0); this.number(s.visitors,14,2,3);
+      this.sprite('symbols',34,0,7,12,42,0); this.number(s.cash,50,2,5);
+      this.sprite('symbols',24,0,10,10,97,1); this.number(s.happiness,108,2,3);
+      const label = '第'+s.day+'天', tw = this.measure(label) + 3;
+      this.rect(128-tw,114,tw,14,'#ddd'); this.rect(129-tw,115,tw-1,13,'#fff'); this.text(label,127,115,'#101932','right');
+      this.sprite('softkey',0,0,9,5,2,121);
+    }
+    speaker(x, y, tier) {
+      const sx = 26 + tier * 60;
+      this.sprite('table',sx,0,17,17,x,y-17);
+      if(tier===2) this.sprite('table',sx+17,5,17,12,x,y-29);
+    }
+    ball(x,y,flash) { this.sprite('light',0,0,23,28,x,y); if(flash)this.sprite('light',23,0,27,14,x-4,y+24); }
+    danceGirl(x,y,beat) {
+      this.sprite('stage',30,0,28,19,x,y-19);
+      this.person(x+4,y-12,10,4,beat,x>64);
+      this.sprite('stage',85,0,24,28,x+2,y-47);
+      this.sprite('stage',58,0,24,28,x+2,y-75);
+    }
+    overlay(message) { this.rect(8,47,112,32,'#172849'); this.text(message,64,56,'#fff','center'); }
+  }
+  root.DiscoRenderer = Renderer;
+})(globalThis);
+
+</script>
+<script>
+(async function () {
+  'use strict';
+  const canvas = document.getElementById('game');
+  const statusEl = document.getElementById('status');
+  const helpDialog = document.getElementById('install-help');
+  const renderer = new DiscoRenderer(canvas);
+  const game = new DiscoEngine.Game();
+  const audio = typeof DiscoAudio === 'function' ? new DiscoAudio() : null;
+  const SAVE_KEY = 'disco-faithful-v1';
+  const names = { lights:'灯光', floor:'舞池', ball:'迪斯科球', dancer:'跳舞女郎', speakers:'音响', decks:'控制设备', host:'主持人', advertising:'广告' };
+  const hostNames = ['Crash','Fiasco','Dany','Nurse','Robot','Loop','Alfa C.'];
+  const adNames = ['派发传单','报纸广告','电视广告','会员派对'];
+  const objectiveText = ['在31天内，赚到$10000。升级设备，吸引更多顾客。','在31天内，把开心指数提升到100。','在31天内，让舞厅人数达到300。'];
+  let view = { type:'title' }, history = [], hasGame = false, unlocked = 1, scores = [0,0,0], paused = false, visible = !document.hidden;
+  let lastTime = performance.now(), elapsed = 0, saveAge = 0, lastDay = 0, lastEvent = null;
+  let storageAvailable = true, lastPaint = 0;
+  try {
+    const save = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null');
+    if (save && save.version === 1) {
+      unlocked = Math.max(1, Math.min(3, Math.floor(save.unlocked) || 1));
+      scores = Array.isArray(save.scores) ? [0,1,2].map(i => Math.max(0, Number(save.scores[i]) || 0)) : scores;
+      if (save.game && game.restore(save.game)) hasGame = true;
+    }
+  } catch (error) {
+    // A damaged save can be replaced; a denied storage API must not stop play.
+    storageAvailable = error instanceof SyntaxError;
+  }
+  await renderer.load();
+
+  function say(text) { statusEl.textContent = text; }
+  function save() {
+    if (!storageAvailable) return;
+    try { localStorage.setItem(SAVE_KEY, JSON.stringify({version:1,game:hasGame ? game.snapshot() : null,unlocked,scores})); }
+    catch (_) { storageAvailable = false; say('浏览器无法保存进度；当前游戏仍可继续。'); }
+  }
+  function row(label, action, disabled=false) { return {label,action,disabled}; }
+  function setView(next, push=false) {
+    if (push) history.push(view);
+    view = next;
+    audio?.setScene(hasGame && next.type !== 'title' ? 'game' : 'title');
+    announce(); draw();
+  }
+  function menu(title, rows, subtitle, push=true) { setView({type:'menu',title,rows,index:0,subtitle},push); }
+  function announce() {
+    if(view.type==='menu') say(view.title+'：'+view.rows[view.index].label+'。上下选择，确认键进入。');
+    else if(view.type==='dialog') say(view.title+'。'+(Array.isArray(view.body)?view.body.join(' '):view.body));
+    else if(view.type==='game') say('左功能键：经营菜单；5或确认键：欢乐时间；右功能键：主菜单。');
+    else say('按确认键进入游戏。');
+  }
+  function back() {
+    if (view.type === 'title') return;
+    if (view.type === 'game') { mainMenu(); return; }
+    if (history.length) setView(history.pop());
+    else if (hasGame) returnToGame(); else setView({type:'title'});
+  }
+  function returnToGame() { history=[];setView({type:'game'});save(); }
+  function message(title, body, onOK, left='确定', right='返回') {
+    const previous=view;
+    setView({type:'dialog',title,body,scroll:0,left,right,onOK:onOK || (()=>setView(previous)),onBack:()=>setView(previous)});
+  }
+  function mainMenu() {
+    history=[];
+    const rows=[];
+    if(hasGame) rows.push(row('继续游戏',()=>{ if(game.state.status==='playing')returnToGame(); else result(); }));
+    rows.push(row('新游戏',()=>chooseLevel()),row('最高纪录',()=>showScores()),row('游戏说明',()=>instructions()),row('关于',()=>about()),row('返回封面',()=>setView({type:'title'})));
+    menu('DISCO',rows,null,false);
+  }
+  function chooseLevel() {
+    menu('选择关卡',[1,2,3].map(n=>row('第'+n+'关'+(n>unlocked?'  未解锁':''),()=>{
+      if(n>unlocked){message('尚未解锁','请先完成上一关。');return;}
+      if(hasGame && game.state.status==='playing') message('开始新游戏？','现有关卡的进度将被替换。',()=>intro(n),'开始','取消');
+      else intro(n);
+    },n>unlocked)));
+  }
+  function intro(level) {
+    setView({type:'dialog',title:'第'+level+'关',body:objectiveText[level-1],scroll:0,left:'开始',right:'返回',onOK:()=>startLevel(level),onBack:()=>mainMenu()});
+  }
+  function startLevel(level) {
+    game.start(level);hasGame=true;paused=false;lastDay=0;lastEvent=null;updatePause();returnToGame();
+  }
+  function options() {
+    menu('经营菜单',[
+      row('雇主持人',()=>catalog('host')),
+      row('购买视觉设备',()=>menu('视觉设备',['lights','floor','dancer','ball'].map(k=>row(names[k],()=>catalog(k))))),
+      row('购买音响设备',()=>menu('音响设备',['speakers','decks'].map(k=>row(names[k],()=>catalog(k))))),
+      row('广告宣传',()=>catalog('advertising')),
+      row('申请贷款',()=>loan()),row('经营状况',()=>showStatus()),
+      row('欢乐时间 '+(game.state.happyHour?'关闭':'开启'),()=>{game.toggleHappyHour();returnToGame();}),
+      row('返回舞厅',()=>returnToGame())
+    ],'$'+game.state.cash,false);
+  }
+  function labelItem(k, item, i) {
+    const name = k==='host' ? hostNames[i] || item.label : k==='advertising' ? adNames[i] || item.label : (k==='ball'?'迪斯科球':names[k]+item.tier);
+    const bought = !['host','advertising'].includes(k) && (game.state.equipment[k] || 0) >= item.tier;
+    return {name, label:name+(bought?' 已购':' $'+item.cost),bought};
+  }
+  function catalog(k, push=true) {
+    const rows = (DiscoEngine.CATALOG[k] || []).map((item,i)=>{
+      const {name,label,bought}=labelItem(k,item,i);
+      return row(label,()=>{
+        const available=game.canBuy(k,item.tier);
+        if(!available.ok){message('提示',available.message);return;}
+        const before=view;
+        const detail = item.description || ('购买'+name+'？');
+        const body=[name+'  $'+item.cost,detail,'现有现金 $'+game.state.cash];
+        message('确认'+(k==='host'?'雇用':k==='advertising'?'投放':'购买'),body,()=>{
+          const outcome=game.buy(k,item.tier);game.drainMessages();save();
+          if(outcome.ok){returnToGame();say(outcome.message || '已购买'+name+'。');}
+          else {setView(before);message('提示',outcome.message);}
+        },'确定','取消');
+      },bought);
+    });
+    menu(names[k],rows,'现金 $'+game.state.cash,push);
+  }
+  function loan() {
+    message('申请贷款',['借款 $1000','需要偿还 $1500。','营业收入会自动用于偿还贷款。'],()=>{
+      const r=game.takeLoan();game.drainMessages();save();if(r.ok){returnToGame();say('已获得$1000贷款。');}else message('贷款未获批准',r.message);
+    },'借款','取消');
+  }
+  function showStatus() {
+    const s=game.state;
+    message('经营状况',['第'+s.level+'关  第'+s.day+'天','现金 $'+s.cash,'人数 '+s.visitors,'开心指数 '+s.happiness+'%','贷款 $'+s.loan,'目标：'+['现金$10000','开心指数100','人数300'][s.level-1]],null);
+  }
+  function instructions() {
+    setView({type:'dialog',title:'游戏说明',body:[
+      '帮助Groove博士经营舞厅，完成三个挑战。','左功能键打开经营菜单。上下选择，确认购买。','营业时，按5或确认键开关欢乐时间。','欢乐时间能提高人气，但会持续消耗现金。','打广告吸引顾客。升级舞池、灯光和音响。','主持人会暂时提高人气；高级主持人需要更好的设备。','每一天30秒。打开菜单、暂停或离开页面时，游戏停止计时。','游戏进度自动保存。'
+    ],scroll:0,left:'确定',right:'返回',onOK:()=>mainMenu(),onBack:()=>mainMenu()});
+  }
+  function about() { message('关于DISCO',['迪斯科舞厅','基于保存的原版像素素材和经营规则制作。','中文菜单重新制作。','原曲使用合成音色播放。'],()=>mainMenu()); }
+  function showScores() { message('最高纪录',scores.map((n,i)=>'第'+(i+1)+'关：'+n+'分'),()=>mainMenu()); }
+  function result() {
+    const s=game.state, won=s.status==='won';
+    if(won){unlocked=Math.max(unlocked,Math.min(3,s.level+1));scores[s.level-1]=Math.max(scores[s.level-1],s.score);}
+    save();history=[];
+    setView({type:'dialog',title:won?'挑战成功！':'挑战结束',body:won?['第'+s.level+'关已完成！','现金 $'+s.cash,'人数 '+s.visitors,'开心指数 '+s.happiness+'%',s.level<3?'继续挑战下一关。':'你已经成为舞厅大师！']:['这一关未能完成。','第'+s.day+'天  $'+s.cash,'试试及时打广告、升级设备，并留意现金。'],scroll:0,left:won&&s.level<3?'下一关':'主菜单',right:'主菜单',onOK:()=>won&&s.level<3?intro(s.level+1):mainMenu(),onBack:()=>mainMenu()});
+  }
+  function updatePause() {
+    const b=document.getElementById('pause-toggle');b.setAttribute('aria-pressed',String(paused));b.querySelector('span:last-child').textContent=paused?'继续':'暂停';
+    audio?.setPaused(paused||!visible||Boolean(helpDialog?.open));
+  }
+  function input(raw) {
+    audio?.resumeFromGesture?.();
+    const key = {'2':'ArrowUp','8':'ArrowDown','4':'ArrowLeft','6':'ArrowRight','5':'Enter',' ':'Enter','Escape':'SoftRight','F1':'SoftLeft','F2':'SoftRight'}[raw] || raw;
+    if(paused && view.type==='game' && key==='Enter'){paused=false;updatePause();draw();return;}
+    if(view.type==='title'){if(['Enter','SoftLeft','SoftRight'].includes(key))mainMenu();return;}
+    if(view.type==='game'){
+      if(key==='SoftLeft')options(); else if(key==='SoftRight')mainMenu();
+      else if(key==='Enter'&&!paused){game.toggleHappyHour();save();say(game.state.happyHour?'欢乐时间已开启，现金将持续消耗。':'欢乐时间已关闭。');}
+    }else if(view.type==='menu'){
+      if(key==='ArrowDown'||key==='ArrowUp') {view.index=(view.index+(key==='ArrowDown'?1:-1)+view.rows.length)%view.rows.length;announce();}
+      else if(key==='Enter'||key==='SoftLeft')view.rows[view.index]?.action();
+      else if(key==='SoftRight')back();
+    }else if(view.type==='dialog'){
+      const lines=(Array.isArray(view.body)?view.body:[view.body]).flatMap(x=>renderer.wrap(x));
+      if(key==='ArrowDown')view.scroll=Math.min(Math.max(0,lines.length-6),view.scroll+1);
+      else if(key==='ArrowUp')view.scroll=Math.max(0,view.scroll-1);
+      else if(key==='SoftRight')view.onBack?.();
+      else if(key==='Enter'||key==='SoftLeft')view.onOK?.();
+    }
+    draw();
+  }
+  function draw() {
+    if(view.type==='title')renderer.title(elapsed);
+    else if(view.type==='game'){
+      renderer.room(game.state,elapsed);if(paused)renderer.overlay('已暂停');
+    }else if(view.type==='menu')renderer.menu(view.title,view.rows,view.index,{subtitle:view.subtitle});
+    else renderer.dialog(view.title,view.body,{left:view.left,right:view.right,scroll:view.scroll});
+    const s=game.state;
+    const labels = view.type==='game' ? ['经营',paused?'继续':'欢乐时间','菜单']
+      : view.type==='title' ? ['开始','开始游戏','开始']
+      : view.type==='dialog' ? [view.left,view.left,view.right] : ['选择','确认','返回'];
+    ['soft-left-label','confirm-label','soft-right-label'].forEach((id,i)=>{
+      const element=document.getElementById(id);
+      if(element && element.textContent!==labels[i]) element.textContent=labels[i];
+      element?.closest('button')?.setAttribute('aria-label',labels[i]);
+    });
+    const center=document.getElementById('confirm-label')?.closest('button');
+    if(center)center.setAttribute('aria-pressed',String(view.type==='game' && s.happyHour && !paused));
+    const hint=document.getElementById('mobile-help');
+    if(hint)hint.textContent=view.type==='game'?'左键经营 · 中键欢乐时间 · 右键菜单':view.type==='title'?'轻点画面，开始营业':view.type==='dialog'?'上下键翻页 · 确认或返回':'轻点菜单选项 · 上下键滚动';
+    canvas.dataset.screen=view.type;
+    canvas.dataset.title=view.title || (view.type==='game'?'舞厅':'DISCO');
+    canvas.dataset.selection=view.type==='menu'?view.rows[view.index]?.label:'';
+    canvas.dataset.cash=hasGame?s.cash:'';canvas.dataset.day=hasGame?s.day:'';
+    canvas.dataset.visitors=hasGame?s.visitors:'';canvas.dataset.happiness=hasGame?s.happiness:'';
+    canvas.dataset.paused=String(paused);canvas.dataset.happyHour=String(hasGame&&s.happyHour);
+    canvas.setAttribute('aria-label',view.type==='game'?'舞厅，第'+s.day+'天，现金'+s.cash+'，人数'+s.visitors+'，开心指数'+s.happiness+'。':view.type==='menu'?view.title+'。当前选择：'+view.rows[view.index]?.label:view.type==='dialog'?view.title+'。'+String(view.body):'DISCO原版封面。按确认键开始。');
+  }
+  document.querySelectorAll('[data-key]').forEach(button=>{
+    button.addEventListener('click',event=>{input(button.dataset.key);if(event.detail>0&&!matchMedia('(pointer: coarse)').matches)canvas.focus({preventScroll:true});});
+    button.addEventListener('pointerdown',()=>button.classList.add('is-pressed'));
+    ['pointerup','pointerleave','pointercancel'].forEach(t=>button.addEventListener(t,()=>button.classList.remove('is-pressed')));
+  });
+  // Touch the actual menu row. Keep the original pixels and keyboard controls.
+  let touchStart=null;
+  canvas.addEventListener('pointerdown',event=>{
+    if(!event.isPrimary || event.button!==0)return;
+    touchStart={x:event.clientX,y:event.clientY,id:event.pointerId};
+  });
+  canvas.addEventListener('pointercancel',()=>{touchStart=null;});
+  canvas.addEventListener('pointerup',event=>{
+    if(!touchStart || event.pointerId!==touchStart.id)return;
+    const deltaX=event.clientX-touchStart.x,deltaY=event.clientY-touchStart.y;touchStart=null;
+    audio?.resumeFromGesture?.();
+    if(Math.abs(deltaY)>24 && Math.abs(deltaY)>Math.abs(deltaX) && ['menu','dialog'].includes(view.type)){
+      input(deltaY<0?'ArrowDown':'ArrowUp');return;
+    }
+    if(Math.hypot(deltaX,deltaY)>16)return;
+    const bounds=canvas.getBoundingClientRect();
+    const x=(event.clientX-bounds.left)*128/bounds.width,y=(event.clientY-bounds.top)*128/bounds.height;
+    if(x<0||x>=128||y<0||y>=128)return;
+    if(view.type==='title'){input('Enter');return;}
+    if(view.type==='menu'){
+      if(y>=114){input(x<64?'SoftLeft':'SoftRight');return;}
+      const capacity=view.subtitle?5:6,startY=view.subtitle?33:23;
+      const start=Math.max(0,Math.min(view.index-Math.floor(capacity/2),view.rows.length-capacity));
+      const visibleRow=Math.floor((y-startY+1)/14);
+      if(visibleRow>=0&&visibleRow<capacity&&start+visibleRow<view.rows.length){view.index=start+visibleRow;input('Enter');}
+    }else if(view.type==='dialog' && y>=114)input(x<64?'SoftLeft':'SoftRight');
+  });
+  const accepted=new Set(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Enter','Escape',' ','F1','F2','1','2','3','4','5','6','7','8','9','0','*','#']);
+  document.addEventListener('keydown',event=>{
+    if(helpDialog?.open)return;
+    if(!accepted.has(event.key)||event.ctrlKey||event.metaKey||event.altKey)return;
+    // Native button activation is handled by click; do not dispatch it twice.
+    if(event.target instanceof HTMLButtonElement && ['Enter',' '].includes(event.key))return;
+    event.preventDefault();if(event.repeat && !event.key.startsWith('Arrow'))return;input(event.key);
+  });
+  document.getElementById('pause-toggle').addEventListener('click',()=>{paused=!paused;updatePause();say(paused?'已暂停。':'继续营业。');save();draw();});
+  document.getElementById('sound-toggle').addEventListener('click',async()=>{
+    if(!audio)return;
+    try {
+      const wanted=!audio.enabled || audio.needsGesture;
+      if(audio.enabled && audio.needsGesture) await audio.resumeFromGesture();
+      else await audio.setEnabled(wanted);
+      const b=document.getElementById('sound-toggle');b.setAttribute('aria-pressed',String(audio.enabled));b.querySelector('span:last-child').textContent=audio.enabled?'音乐开启':'音乐关闭';
+      say(audio.enabled?(audio.needsGesture?'轻点音乐按钮恢复声音。':'原曲音乐已开启。'):wanted?'暂时无法播放，请再轻点音乐按钮。':'音乐已关闭。');
+    }catch(_){say('当前浏览器暂时无法播放声音。');}
+  });
+  function syncVisibility() {
+    visible=!document.hidden;lastTime=performance.now();updatePause();
+    if(!visible)save();
+  }
+  document.addEventListener('visibilitychange',syncVisibility);
+  window.addEventListener('pagehide',()=>{visible=false;save();audio?.setPaused(true);});
+  window.addEventListener('pageshow',syncVisibility);
+  if(helpDialog) new MutationObserver(()=>{lastTime=performance.now();updatePause();}).observe(helpDialog,{attributes:true,attributeFilter:['open']});
+  function frame(now) {
+    const dt=Math.min((now-lastTime)/1000,.25);lastTime=now;
+    if(visible&&!paused&&!helpDialog?.open){elapsed+=dt;audio?.tick();}
+    if(visible&&!paused&&!helpDialog?.open&&hasGame&&view.type==='game'&&game.state.status==='playing'){
+      game.tick(dt);saveAge+=dt;
+      if(game.state.status!=='playing')result();
+      else if(game.state.day!==lastDay){lastDay=game.state.day;say('第'+lastDay+'天，现金$'+game.state.cash+'，人数'+game.state.visitors+'。');}
+      const ev=game.state.event;
+      if(ev && ev.id!==lastEvent){lastEvent=ev.id;say(ev.label);}
+      if(!ev)lastEvent=null;
+      const notices=game.drainMessages();
+      if(notices.length && view.type==='game' && game.state.status==='playing') message('舞厅消息',notices,()=>returnToGame());
+      if(saveAge>5){save();saveAge=0;}
+    }
+    if(visible && view.type==='game' && now-lastPaint>=1000/30){draw();lastPaint=now;}
+    requestAnimationFrame(frame);
+  }
+  updatePause();announce();draw();requestAnimationFrame(frame);
+})();
+
+</script>
+<script>
+(function () {
+  'use strict';
+  const help = document.getElementById('install-help');
+  const openHelp = document.getElementById('install-help-toggle');
+  if (help && openHelp) {
+    const close = () => typeof help.close === 'function' ? help.close() : help.removeAttribute('open');
+    openHelp.addEventListener('click', () => typeof help.showModal === 'function' ? help.showModal() : help.setAttribute('open',''));
+    document.getElementById('install-help-close')?.addEventListener('click', close);
+    help.addEventListener('click', event => { if (event.target === help) close(); });
+  }
+  // A public HTTPS deployment can be installed from Safari and cached offline.
+  // Plain downloaded HTML still plays without registering a service worker.
+  if (document.querySelector('meta[name="disco-web-app"]') && 'serviceWorker' in navigator && /^(https?:)$/.test(location.protocol) && window.isSecureContext) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./sw.js', { scope: './' }).then(() => navigator.serviceWorker.ready).then(() => {
+        const status=document.getElementById('offline-status');
+        if(status)status.textContent='已准备好离线游玩。添加到主屏幕后，可像 App 一样打开。';
+      }).catch(() => {
+        const status=document.getElementById('offline-status');
+        if(status)status.textContent='当前可以在线游玩，离线缓存暂不可用。';
+      });
+    }, { once: true });
+  } else {
+    const status=document.getElementById('offline-status');
+    if(status)status.textContent='iPhone 请通过网页链接打开；电脑可直接打开 HTML 文件。';
+  }
+})();
+
+</script>
+</body>
+</html>
